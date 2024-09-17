@@ -47,7 +47,7 @@ class _ReportCommentsPageState extends State<ReportCommentsPage> {
                   maxLines: null, // Allows multi-line input
                   expands: true, // Expands to take available space
                   decoration: InputDecoration(
-                    hintText: 'Enter your text here...',
+                    hintText: 'Enter your text here.',
                     hintStyle: const TextStyle(color: Colors.white54),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.0),
