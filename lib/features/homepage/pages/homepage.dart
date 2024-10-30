@@ -1,35 +1,93 @@
 import 'package:flutter/material.dart';
-import 'package:propertycheckapp/constants.dart';
-import 'package:propertycheckapp/features/visit_details/pages/visit_details_page.dart';
+import 'package:propertycheckapp/features/homepage/data/datasources/booking_local_datasource.dart';
+import 'package:propertycheckapp/features/homepage/data/datasources/booking_remote_datasource.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class HomeScreen extends StatelessWidget {
+import '../../../constants.dart';
+import '../../visit_details/pages/visit_details_page.dart';
+import '../data/models/booking.dart';
+import '../data/repository/booking_repo.dart';
+
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildOverviewCard(),
-          const SizedBox(height: 20.0),
-          const Text(
-            'Planned Visits',
-            style: TextStyle(
-              fontSize: 20.0,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 10.0),
-          _buildPlannedVisitsList(context),
-        ],
-      ),
-    );
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  List<Booking> bookings = List.empty();
+  bool loading = false;
+  @override
+  void initState() {
+    _LoadAllBookings();
+    super.initState();
   }
 
-  Widget _buildOverviewCard() {
+  void _LoadAllBookings() async {
+    try {
+      setState(() {
+        loading = true;
+      });
+      BookingRepository repository = BookingRepository(
+          remoteDataSource: BookingRemoteDataSource(),
+          localDataSource: BookingLocalDataSource());
+      // Get the user id from shared preferences
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final int? userId = prefs.getInt('userId');
+
+      if (userId != null) {
+        var bookingData = await repository.getAllBookings(userId);
+        setState(() {
+          bookings = bookingData ?? [];
+          loading = false;
+        });
+      } else {
+        // If userId is null, emit an error
+      }
+    } catch (e) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return (loading)
+        ? Container(
+            alignment: Alignment.center,
+            padding: const EdgeInsets.all(20),
+            child: const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          )
+        : SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                buildOverviewCard(bookings),
+                const SizedBox(height: 20.0),
+                const Text(
+                  'Planned Visits',
+                  style: TextStyle(
+                    fontSize: 20.0,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 10.0),
+                buildPlannedVisitsList(),
+              ],
+            ),
+          );
+  }
+
+  Widget buildOverviewCard(List<Booking> bookings) {
+    int plannedCount =
+        bookings.where((b) => b.bookingStatus == 'Planned').length;
+    int completedCount =
+        bookings.where((b) => b.bookingStatus == 'Completed').length;
+    int inProgressCount =
+        bookings.where((b) => b.bookingStatus == 'In Progress').length;
+
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16.0),
@@ -40,16 +98,19 @@ class HomeScreen extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _buildOverviewItem('Planned', '2', Icons.schedule),
-            _buildOverviewItem('Completed', '2', Icons.check_circle),
-            _buildOverviewItem('In Progress', '1', Icons.pending),
+            buildOverviewItem(
+                'Planned', plannedCount.toString(), Icons.schedule),
+            buildOverviewItem(
+                'In Progress', inProgressCount.toString(), Icons.pending),
+            buildOverviewItem(
+                'Completed', completedCount.toString(), Icons.check_circle),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildOverviewItem(String title, String count, IconData icon) {
+  Widget buildOverviewItem(String title, String count, IconData icon) {
     return Column(
       children: [
         Icon(icon, color: Colors.white, size: 30.0),
@@ -74,106 +135,56 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPlannedVisitsList(BuildContext context) {
-    final List<Map<String, String>> visits = [
-      {
-        'propertyName': '3 Bedroom Appartment',
-        'address': '789 Creek Lane, Dubai',
-        'time': '2:00 PM',
-        'bedrooms': '3',
-        'baths': '2',
-        'client': 'Ahmed Khan',
-        'status': 'In Progress',
-        'propertyType': 'Appartment'
-      },
-      {
-        'propertyName': '5 Bedroom Duplex Villa',
-        'address': '123 Palm Street, Dubai',
-        'time': '10:00 AM',
-        'bedrooms': '5',
-        'baths': '2',
-        'client': 'John Doe',
-        'status': 'Planned',
-        'propertyType': 'Villa'
-      },
-      {
-        'propertyName': 'Sea Facing Beach Villa',
-        'address': '456 Marina Road, Dubai',
-        'time': '12:00 PM',
-        'bedrooms': '6',
-        'baths': '4',
-        'client': 'Jane Smith',
-        'status': 'Planned',
-        'propertyType': 'Villa'
-      },
-      {
-        'propertyName': '5 Bedroom Duplex Appartment',
-        'address': '456 Marina Road, Dubai',
-        'time': '12:00 PM',
-        'bedrooms': '5',
-        'baths': '2',
-        'client': 'Jane Smith',
-        'status': 'Completed',
-        'propertyType': 'Appartment'
-      },
-      {
-        'propertyName': '2 Bedroom Appartment',
-        'address': '456 Marina Road, Dubai',
-        'time': '12:00 PM',
-        'bedrooms': '2',
-        'baths': '2',
-        'client': 'Jane Smith',
-        'status': 'Completed',
-        'propertyType': 'Appartment'
-      },
-    ];
-
-    return Column(
-      children: visits.map((visit) {
-        return InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => VisitDetailPage(
-                  propertyName: visit['propertyName'] ?? 'Default Property',
-                  scheduledDateTime: visit['time'] ?? 'Unknown Time',
-                  address: visit['address'] ?? 'Unknown Address',
-                  bedrooms: int.parse(visit['bedrooms'] ?? '0'),
-                  washrooms: int.parse(visit['baths'] ?? '0'),
-                  propertyType: visit['propertyType'] ?? 'Unknown Type',
-                  clientName: visit['client'] ?? 'Unknown',
-                  clientPhoneNumber: visit['clientPhone'] ?? 'Unknown',
-                ),
-              ),
-            );
-          },
-          child: Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.0),
-            ),
-            child: ListTile(
-              title: Text(
-                visit['address']!,
-                style: const TextStyle(color: Colors.black),
-              ),
-              subtitle: Text(
-                '${visit['time']} - ${visit['client']}',
-                style: const TextStyle(color: Colors.grey),
-              ),
-              trailing: Text(
-                visit['status']!,
-                style: TextStyle(
-                  color: visit['status'] == 'In Progress'
-                      ? Colors.orange
-                      : Colors.green,
-                  fontWeight: FontWeight.bold,
-                ),
+  Widget buildPlannedVisitsList() {
+    return bookings.isEmpty
+        ? const Center(
+            child: Text(
+              'No bookings found',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey,
               ),
             ),
-          ),
-        );
-      }).toList(),
-    );
+          )
+        : Column(
+            children: bookings.map((booking) {
+              return InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => VisitDetailPage(
+                        booking: booking,
+                      ),
+                    ),
+                  );
+                },
+                child: Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  child: ListTile(
+                    title: Text(
+                      booking.area,
+                      style: const TextStyle(color: Colors.black),
+                    ),
+                    subtitle: Text(
+                      '${booking.visitDate} - ${booking.clientName}',
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                    trailing: Text(
+                      booking.bookingStatus,
+                      style: TextStyle(
+                        color: booking.bookingStatus != "Planned"
+                            ? Colors.green
+                            : Colors.orange,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          );
   }
 }

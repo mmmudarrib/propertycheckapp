@@ -4,7 +4,6 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:propertycheckapp/features/issue_list/pages/issue_list.dart';
 import 'package:propertycheckapp/widgets/rounded_button_widget.dart';
 
 class IssueRecordPage extends StatefulWidget {
@@ -72,16 +71,7 @@ class _IssueRecordPageState extends State<IssueRecordPage> {
                 });
               }),
               const SizedBox(height: 16.0),
-              RoundedButton(
-                  text: "Save Record",
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const IssueListPage(),
-                      ),
-                    );
-                  })
+              RoundedButton(text: "Save Record", onPressed: () {})
             ],
           ),
         ),

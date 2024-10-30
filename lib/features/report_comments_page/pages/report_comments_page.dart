@@ -1,16 +1,22 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import '../../../widgets/rounded_button_widget.dart';
-import '../../homepage/pages/homepage.dart';
+import '../../dashboard/pages/dashboard.dart';
+import '../../homepage/data/models/booking.dart';
 
 class ReportCommentsPage extends StatefulWidget {
-  const ReportCommentsPage({super.key});
+  final Booking booking;
+  const ReportCommentsPage({super.key, required this.booking});
 
   @override
   State<ReportCommentsPage> createState() => _ReportCommentsPageState();
 }
 
 class _ReportCommentsPageState extends State<ReportCommentsPage> {
+  final TextEditingController textEditingController = TextEditingController();
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -43,6 +49,7 @@ class _ReportCommentsPageState extends State<ReportCommentsPage> {
 
               Expanded(
                 child: TextField(
+                  controller: textEditingController,
                   textAlign: TextAlign.start,
                   maxLines: null, // Allows multi-line input
                   expands: true, // Expands to take available space
@@ -64,11 +71,12 @@ class _ReportCommentsPageState extends State<ReportCommentsPage> {
               const SizedBox(height: 10.0),
               RoundedButton(
                   text: "Complete Report",
-                  onPressed: () {
+                  onPressed: () async {
+                    await updateBookingStatus(widget.booking.id);
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const HomeScreen(),
+                        builder: (context) => const DashboardScreen(),
                       ),
                     );
                   }),
@@ -77,5 +85,27 @@ class _ReportCommentsPageState extends State<ReportCommentsPage> {
         ),
       ),
     );
+  }
+
+  Future<void> updateBookingStatus(int bookingId) async {
+    final url = Uri.parse(
+        'https://ilovebackend.propertycheck.me/api/booking/attributes/$bookingId');
+
+    final response = await http.patch(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'bookingStatus': 'Completed',
+        'finalRemarks': textEditingController.text,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print('Booking status updated successfully.');
+    } else {
+      print('Failed to update booking status. Error: ${response.statusCode}');
+    }
   }
 }

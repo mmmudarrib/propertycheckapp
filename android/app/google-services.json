@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "989244274037",
+    "project_id": "propertycheck-521a7",
+    "storage_bucket": "propertycheck-521a7.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:989244274037:android:282b750c1898d88a80cf3c",
+        "android_client_info": {
+          "package_name": "com.example.propertycheckapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCW5hCMqO8ks_vT-79eMZVKwisCYrhhNxo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

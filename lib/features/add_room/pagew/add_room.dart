@@ -1,11 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:propertycheckapp/features/homepage/data/models/booking.dart';
 
 import '../../../constants.dart';
 import '../../../widgets/rounded_button_widget.dart';
 import '../../rooms_list/pages/rooms_list.dart';
 
 class AddRoomPage extends StatefulWidget {
-  const AddRoomPage({super.key});
+  final Booking booking;
+  const AddRoomPage({super.key, required this.booking});
 
   @override
   State<AddRoomPage> createState() => _AddRoomPageState();
@@ -14,15 +19,40 @@ class AddRoomPage extends StatefulWidget {
 class _AddRoomPageState extends State<AddRoomPage> {
   String? _selectedRoomCategory;
   String? _selectedRoomSubCategory;
-  final List<String> roomTypes = [
-    'Living Room',
-    'Kitchen',
-    'Bedroom',
-    'Bathroom'
-  ];
-  final List<String> roomSubtypes = ['Ceiling', 'Wall', 'Floor', 'Sink'];
+  Map<String, dynamic> roomTypes = {};
+  List<dynamic> roomSubtypes = [];
+
+  @override
+  void initState() {
+    _fetchRoomTypes();
+    super.initState();
+  }
+
+  Future<void> _fetchRoomTypes() async {
+    final response = await http.get(Uri.parse(
+        'https://ilovebackend.propertycheck.me/api/roomtype/propertyType/${widget.booking.bookingChildPropertytype}'));
+
+    if (response.statusCode == 200) {
+      setState(() {
+        roomTypes = json.decode(response.body);
+      });
+    } else {
+      // Handle error
+      print('Failed to load room types');
+    }
+  }
+
+  void _onRoomCategoryChanged(String? value) {
+    setState(() {
+      _selectedRoomCategory = value;
+      _selectedRoomSubCategory = null;
+      roomSubtypes = roomTypes[value]?['children'] ?? [];
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final Booking booking = widget.booking;
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -40,18 +70,25 @@ class _AddRoomPageState extends State<AddRoomPage> {
             _buildDropdown(
               label: 'Room Type',
               value: _selectedRoomCategory,
-              items: roomTypes,
-              onChanged: (value) {
-                setState(() {
-                  _selectedRoomCategory = value;
-                });
-              },
+              items: roomTypes.keys
+                  .map((key) => DropdownMenuItem<String>(
+                      value: key,
+                      child: Text(roomTypes[key]['parentName'],
+                          style: const TextStyle(color: Colors.white))))
+                  .toList(),
+              onChanged: _onRoomCategoryChanged,
             ),
             const SizedBox(height: 16.0),
             _buildDropdown(
               label: 'Room SubType',
               value: _selectedRoomSubCategory,
-              items: roomSubtypes,
+              items: roomSubtypes
+                  .map((key) => DropdownMenuItem<String>(
+                        value: key['id'].toString(),
+                        child: Text(key['name'] ?? "",
+                            style: const TextStyle(color: Colors.white)),
+                      ))
+                  .toList(),
               onChanged: (value) {
                 setState(() {
                   _selectedRoomSubCategory = value;
@@ -61,13 +98,48 @@ class _AddRoomPageState extends State<AddRoomPage> {
             const SizedBox(height: 16.0),
             RoundedButton(
                 text: "Add New Room",
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => RoomListPage(),
-                    ),
-                  );
+                onPressed: () async {
+                  if (_selectedRoomCategory != null &&
+                      _selectedRoomSubCategory != null) {
+                    final parentId = int.parse(_selectedRoomCategory!);
+                    final childId = int.parse(_selectedRoomSubCategory!);
+                    final requestBody = {
+                      "brtParentId": parentId,
+                      "roomtypeId": 2,
+                      "brtChildId": childId,
+                      "bookingId": booking.id,
+                    };
+
+                    final response = await http.post(
+                      Uri.parse(
+                          'https://ilovebackend.propertycheck.me/api/bookingroomtype'),
+                      headers: {'Content-Type': 'application/json'},
+                      body: json.encode(requestBody),
+                    );
+
+                    if (response.statusCode == 201) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RoomListPage(booking: booking),
+                        ),
+                      );
+                    } else {
+                      // Handle error
+                      print('Failed to add room');
+                    }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        backgroundColor: Colors.red,
+                        content: Text('Please select all values correctly',
+                            style: TextStyle(color: Colors.white)),
+                        duration: Duration(
+                            milliseconds:
+                                1000), // How long the snackbar will be visible
+                      ),
+                    );
+                  }
                 })
           ],
         ),
@@ -78,7 +150,7 @@ class _AddRoomPageState extends State<AddRoomPage> {
   Widget _buildDropdown({
     required String label,
     required String? value,
-    required List<String> items,
+    required List<DropdownMenuItem<String>> items,
     required ValueChanged<String?> onChanged,
   }) {
     return Column(
@@ -97,14 +169,10 @@ class _AddRoomPageState extends State<AddRoomPage> {
           dropdownColor: AppColors.primaryColor,
           value: value,
           decoration: const InputDecoration(
+            labelStyle: TextStyle(color: Colors.white),
             border: OutlineInputBorder(),
           ),
-          items: items.map((item) {
-            return DropdownMenuItem(
-              value: item,
-              child: Text(item, style: const TextStyle(color: Colors.white)),
-            );
-          }).toList(),
+          items: items,
           onChanged: onChanged,
           hint: Text(
             'Select $label',

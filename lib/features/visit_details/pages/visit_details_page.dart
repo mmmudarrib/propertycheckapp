@@ -1,33 +1,26 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:propertycheckapp/constants.dart';
+import 'package:propertycheckapp/features/homepage/data/models/booking.dart';
+import 'package:propertycheckapp/features/issue_list/pages/issue_list.dart';
 import 'package:propertycheckapp/widgets/rounded_button_widget.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../start_inspection/start_inspection_page.dart';
 
 class VisitDetailPage extends StatelessWidget {
-  final String propertyName;
-  final String scheduledDateTime;
-  final String address;
-  final int bedrooms;
-  final int washrooms;
-  final String propertyType;
-  final String clientName;
-  final String clientPhoneNumber;
+  final Booking booking;
 
-  const VisitDetailPage({
-    super.key,
-    required this.propertyName,
-    required this.scheduledDateTime,
-    required this.address,
-    required this.bedrooms,
-    required this.washrooms,
-    required this.propertyType,
-    required this.clientName,
-    required this.clientPhoneNumber,
-  });
+  const VisitDetailPage({super.key, required this.booking});
 
   @override
   Widget build(BuildContext context) {
+    String formattedDate =
+        DateFormat('dd-MM-yyyy').format(DateTime.parse(booking.visitDate));
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -38,84 +31,103 @@ class VisitDetailPage extends StatelessWidget {
           style: TextStyle(color: Colors.white),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              propertyName,
-              style: const TextStyle(
-                fontSize: 24.0,
-                color: AppColors.primaryColor,
-                fontWeight: FontWeight.bold,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                booking.clientName,
+                style: const TextStyle(
+                  fontSize: 24.0,
+                  color: AppColors.primaryColor,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 10.0),
-            Text(
-              'Scheduled: $scheduledDateTime',
-              style: const TextStyle(fontSize: 18.0, color: Colors.grey),
-            ),
-            const SizedBox(height: 20.0),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildDetailItem(Icons.bed, '$bedrooms Bedrooms'),
-                _buildDetailItem(Icons.home, propertyType),
-              ],
-            ),
-            const SizedBox(height: 20.0),
-            const Text('Address:',
+              const SizedBox(height: 10.0),
+              Text(
+                'Scheduled: $formattedDate (${booking.visitSlot})',
+                style: const TextStyle(fontSize: 18.0, color: Colors.grey),
+              ),
+              const SizedBox(height: 20.0),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildDetailItem(
+                      Icons.bed, '${booking.numberOfBedrooms} Bedrooms'),
+                  _buildDetailItem(Icons.home, booking.community),
+                ],
+              ),
+              const SizedBox(height: 20.0),
+              const Text('Address:',
+                  style: TextStyle(
+                      fontSize: 18.0,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white)),
+              const SizedBox(height: 8.0),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      "${booking.area} ${booking.community}",
+                      style:
+                          const TextStyle(fontSize: 16.0, color: Colors.white),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.navigation),
+                    color: AppColors.primaryColor,
+                    onPressed: () {
+                      openMap(booking.latitude, booking.longitude);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8.0),
+              const Text(
+                'Notes:',
                 style: TextStyle(
                     fontSize: 18.0,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white)),
-            const SizedBox(height: 8.0),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    address,
-                    style: const TextStyle(fontSize: 16.0, color: Colors.white),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.navigation),
-                  color: AppColors.primaryColor,
-                  onPressed: () {
-                    // Handle navigation button press (e.g., open maps)
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 20.0),
-            _buildMapPreview(),
-            const SizedBox(height: 20.0),
-            const Text(
-              'Notes:',
-              style: TextStyle(
-                  fontSize: 18.0,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
-            ),
-            const SizedBox(height: 8.0),
-            _buildNotesSection(),
-            const SizedBox(height: 20.0),
-            _buildClientInfoSection(),
-            const Spacer(),
-            RoundedButton(
-              text: "Take Main Door Photo",
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const StartInspectionScreen(),
-                  ),
-                );
-              },
-              color: AppColors.primaryColor,
-            )
-          ],
+                    color: Colors.white),
+              ),
+              const SizedBox(height: 8.0),
+              _buildNotesSection(booking.specialInstruction),
+              const SizedBox(height: 20.0),
+              _buildClientInfoSection(context),
+              (booking.bookingStatus == "In Progress")
+                  ? RoundedButton(
+                      text: "Continue Inspection",
+                      onPressed: () async {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => IssueListPage(
+                              booking: booking,
+                            ),
+                          ),
+                        );
+                      },
+                      color: AppColors.primaryColor,
+                    )
+                  : RoundedButton(
+                      text: "Take Main Door Photo",
+                      onPressed: () async {
+                        await updateBookingStatus(booking.id);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => StartInspectionScreen(
+                              booking: booking,
+                            ),
+                          ),
+                        );
+                      },
+                      color: AppColors.primaryColor,
+                    )
+            ],
+          ),
         ),
       ),
     );
@@ -158,21 +170,21 @@ class VisitDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildNotesSection() {
+  Widget _buildNotesSection(String notes) {
     return Container(
       padding: const EdgeInsets.all(12.0),
       decoration: BoxDecoration(
         color: Colors.grey[200],
         borderRadius: BorderRadius.circular(12.0),
       ),
-      child: const Text(
-        'No additional notes available.',
-        style: TextStyle(fontSize: 16.0, color: Colors.black),
+      child: Text(
+        notes,
+        style: const TextStyle(fontSize: 16.0, color: Colors.black),
       ),
     );
   }
 
-  Widget _buildClientInfoSection() {
+  Widget _buildClientInfoSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -183,7 +195,7 @@ class VisitDetailPage extends StatelessWidget {
         ),
         const SizedBox(height: 10.0),
         Text(
-          clientName,
+          booking.clientName,
           style: const TextStyle(fontSize: 16.0, color: Colors.white),
         ),
         const SizedBox(height: 5.0),
@@ -191,11 +203,11 @@ class VisitDetailPage extends StatelessWidget {
           children: [
             IconButton(
               icon: const Icon(Icons.phone, color: Colors.green),
-              onPressed: () => _makePhoneCall(clientPhoneNumber),
+              onPressed: () => _makePhoneCall(booking.clientContact, context),
             ),
             IconButton(
               icon: const Icon(Icons.message, color: Colors.green),
-              onPressed: () => _openWhatsApp(clientPhoneNumber),
+              onPressed: () => _openWhatsApp(booking.clientContact),
             ),
           ],
         ),
@@ -203,11 +215,59 @@ class VisitDetailPage extends StatelessWidget {
     );
   }
 
-  void _makePhoneCall(String phoneNumber) async {
+  void _makePhoneCall(String phoneNumber, BuildContext context) async {
     final Uri url = Uri(scheme: 'tel', path: phoneNumber);
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not make the call to $phoneNumber'),
+        ),
+      );
+    }
   }
 
   void _openWhatsApp(String phoneNumber) async {
     final Uri url = Uri.parse("https://wa.me/$phoneNumber");
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else {
+      throw 'Could not open WhatsApp for $phoneNumber';
+    }
+  }
+
+  void openMap(double? latitude, double? longitude) async {
+    final url =
+        'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude';
+
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Could not open the map.';
+    }
+  }
+
+  Future<void> updateBookingStatus(int bookingId) async {
+    final url = Uri.parse(
+        'https://ilovebackend.propertycheck.me/api/booking/attributes/$bookingId');
+
+    final response = await http.patch(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'bookingStatus': 'In Progress',
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print('Booking status updated successfully.');
+    } else {
+      print('Failed to update booking status. Error: ${response.statusCode}');
+    }
   }
 }
