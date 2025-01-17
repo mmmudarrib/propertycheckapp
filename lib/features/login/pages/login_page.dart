@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../constants.dart';
-import '../../../widgets/rounded_button_widget.dart';
-import '../../../widgets/rounded_text_field_widget.dart';
 import '../data/login_repo.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -13,118 +10,142 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  TextEditingController emailController = TextEditingController();
-  TextEditingController passwordController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
   bool loading = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: (loading)
-          ? Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.all(20),
-              child: const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+      backgroundColor: const Color(0xFF1D1D1B),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Image.asset(
+                'assets/images/logo.png',
+                height: 60,
               ),
-            )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 80.0),
-                  // Logo at the top
-                  Image.asset(
-                    'assets/images/logo.png',
-                    width: 200,
-                    height: 200,
+              const SizedBox(height: 40),
+              TextField(
+                controller: emailController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: const Color(0xffB7B7B7),
+                  hintText: 'Enter your password here....',
+                  hintStyle: const TextStyle(
+                    color: Colors.grey,
+                    fontFamily: "GothamBook",
+                    fontWeight: FontWeight.w400,
                   ),
-                  const SizedBox(height: 40.0),
-                  // Welcome text
-                  const Text(
-                    'Welcome to Property Check',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24.0,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
                   ),
-                  const SizedBox(height: 40.0),
-                  // Email field
-                  RoundedTextField(
-                    controller: emailController,
-                    hintText: 'Email',
-                    keyboardType: TextInputType.emailAddress,
-                    prefixIcon: const Icon(Icons.email, color: Colors.white),
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: passwordController,
+                style: const TextStyle(color: Colors.white),
+                obscureText: true,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: const Color(0xffB7B7B7),
+                  hintText: 'Enter your password here....',
+                  hintStyle: const TextStyle(
+                    color: Colors.grey,
+                    fontFamily: "GothamBook",
+                    fontWeight: FontWeight.w400,
                   ),
-                  const SizedBox(height: 20.0),
-                  // Password field
-                  RoundedTextField(
-                    controller: passwordController,
-                    hintText: 'Password',
-                    obscureText: true,
-                    prefixIcon: const Icon(Icons.lock, color: Colors.white),
+                  suffixIcon: const Icon(
+                    Icons.visibility_off,
+                    color: Colors.grey,
                   ),
-                  const SizedBox(height: 40.0),
-                  // Login button
-                  RoundedButton(
-                    text: 'Login',
-                    onPressed: () async {
-                      setState(() {
-                        loading = true;
-                      });
-                      final loginRepo = LoginRepository();
-                      await loginRepo.login(
-                        email: emailController.text,
-                        password: passwordController.text,
-                        context: context,
-                      );
-                      setState(() {
-                        loading = false;
-                      });
-                    },
-                    color: AppColors.primaryColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
                   ),
-                  const SizedBox(height: 20.0),
-                  // Forgot password
-                  TextButton(
-                    onPressed: () {}, // Opens bbarray.com when clicked
-                    child: RichText(
-                      text: const TextSpan(
-                        text: 'Built with passion by ', // Regular text
+                ),
+              ),
+              const SizedBox(height: 40),
+              ElevatedButton(
+                onPressed: loading
+                    ? null
+                    : () async {
+                        setState(() {
+                          loading = true;
+                        });
+                        final loginRepo = LoginRepository();
+                        await loginRepo.login(
+                          email: emailController.text,
+                          password: passwordController.text,
+                          context: context,
+                        );
+                        setState(() {
+                          loading = false;
+                        });
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: loading
+                    ? const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      )
+                    : const Text(
+                        'Login',
                         style: TextStyle(
-                          color: Colors.white, // Keep other text white
-                          decoration:
-                              TextDecoration.none, // No underline for this part
+                          color: Colors.white,
+                          fontSize: 18,
                         ),
-                        children: <TextSpan>[
-                          TextSpan(
-                            text: 'BBArray', // BBArray styled differently
-                            style: TextStyle(
-                              color: Colors.green, // Green color for BBArray
-                              fontWeight: FontWeight.bold, // Bold for BBArray
-                              decoration: TextDecoration
-                                  .underline, // Underlined for BBArray
-                            ),
-                          ),
-                          TextSpan(
-                            text:
-                                ' - Version 1.0.5', // Regular text for the version
-                            style: TextStyle(
-                              color:
-                                  Colors.white, // Keep the version text white
-                              decoration: TextDecoration
-                                  .none, // No underline for the version text
-                            ),
-                          ),
-                        ],
                       ),
-                    ),
-                  )
-                ],
               ),
-            ),
+              const SizedBox(height: 20),
+              TextButton(
+                onPressed: () {}, // Opens bbarray.com when clicked
+                child: RichText(
+                  text: const TextSpan(
+                    text: 'Built with passion by ', // Regular text
+                    style: TextStyle(
+                      color: Colors.grey, // Keep other text white
+                      decoration:
+                          TextDecoration.none, // No underline for this part
+                    ),
+                    children: <TextSpan>[
+                      TextSpan(
+                        text: 'BBArray', // BBArray styled differently
+                        style: TextStyle(
+                          color: Colors.green, // Green color for BBArray
+                          // Bold for BBArray
+                          // Underlined for BBArray
+                        ),
+                      ),
+                      TextSpan(
+                        text:
+                            ' - Version 1.0.5', // Regular text for the version
+                        style: TextStyle(
+                          color: Colors.grey, // Keep the version text white
+                          decoration: TextDecoration
+                              .none, // No underline for the version text
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -1,6 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../data/model/issue_list.dart';
 import '../data/repo/booking_issue_repo.dart';
 import 'booking_issue_event.dart';
 import 'booking_issue_state.dart';
@@ -23,10 +22,8 @@ class IssueListBloc extends Bloc<IssueListEvent, IssueListState> {
 
       if (issues.isNotEmpty) {
         // Map the fetched issues to Issue model instances
-        final formattedIssues =
-            issues.map((issue) => Issue.fromDomain(issue)).toList();
 
-        emit(IssueListLoaded(formattedIssues));
+        emit(IssueListLoaded(issues));
       } else {
         emit(IssueListError('No issues found for this booking.'));
       }

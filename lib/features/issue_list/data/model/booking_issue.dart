@@ -1,22 +1,23 @@
 class BookingIssue {
-  int id;
-  int bookingId;
-  int inspectorId;
-  int issueTypeId;
-  int rtParentId;
-  int rtChildId;
-  String issueDescription;
-  String severity;
-  String status;
-  String remarks;
-  bool isDeleted;
-  DateTime createdAt;
-  DateTime updatedAt;
-  Booking booking;
-  User user;
-  IssueType issueType;
-  RoomType roomType;
-  ChildRoomType childRoomType;
+  final int id;
+  final int bookingId;
+  final int inspectorId;
+  final int issueTypeId;
+  final int rtParentId;
+  final int rtChildId;
+  final String issueDescription;
+  final String severity;
+  final String status;
+  final String remarks;
+  final bool isDeleted;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final BookingIssueBooking booking;
+  final List<IssueImage> bookingIssueImages;
+  final User inspector;
+  final IssueType issueType;
+  final RoomType roomType;
+  final RoomType childRoomType;
 
   BookingIssue({
     required this.id,
@@ -33,7 +34,8 @@ class BookingIssue {
     required this.createdAt,
     required this.updatedAt,
     required this.booking,
-    required this.user,
+    required this.bookingIssueImages,
+    required this.inspector,
     required this.issueType,
     required this.roomType,
     required this.childRoomType,
@@ -50,102 +52,104 @@ class BookingIssue {
       issueDescription: json['issueDescription'] ?? '',
       severity: json['severity'],
       status: json['status'] ?? '',
-      remarks: json['remarks'],
+      remarks: json['remarks'] ?? '',
       isDeleted: json['isDeleted'],
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
-      booking: Booking.fromJson(json['bookingissueBooking']),
-      user: User.fromJson(json['bookingissueUser']),
+      booking: BookingIssueBooking.fromJson(json['bookingissueBooking']),
+      bookingIssueImages: (json['bookingissueBookingissueimage'] as List)
+          .map((e) => IssueImage.fromJson(e))
+          .toList(),
+      inspector: User.fromJson(json['bookingissueUser']),
       issueType: IssueType.fromJson(json['bookingissueIssuetype']),
       roomType: RoomType.fromJson(json['bookingissueRoomtype']),
-      childRoomType: ChildRoomType.fromJson(json['bookingissueChildRoomtype']),
+      childRoomType: RoomType.fromJson(json['bookingissueChildRoomtype']),
     );
   }
 }
 
-class Booking {
-  int id;
-  String clientName;
-  String clientEmail;
-  String clientContact;
-  int checkTypeId;
-  bool addReInspection;
-  int ptParentId;
-  int ptChildId;
-  String numberOfBedrooms;
-  String area;
-  String community;
-  String unit;
-  String visitSlot;
-  String specialInstruction;
-  String doorImage;
-  String finalRemarks;
-  String bookingStatus;
-  bool clientPaid;
-  bool isDeleted;
-  DateTime createdAt;
-  DateTime updatedAt;
+class BookingIssueBooking {
+  final int id;
+  final String clientName;
+  final String clientEmail;
+  final String clientContact;
+  final String area;
+  final String community;
+  final String unit;
+  final String visitDate;
+  final String visitSlot;
+  final bool isDeleted;
+  final PropertyType propertyType;
+  final PropertyType childPropertyType;
 
-  Booking({
+  BookingIssueBooking({
     required this.id,
     required this.clientName,
     required this.clientEmail,
     required this.clientContact,
-    required this.checkTypeId,
-    required this.addReInspection,
-    required this.ptParentId,
-    required this.ptChildId,
-    required this.numberOfBedrooms,
     required this.area,
     required this.community,
     required this.unit,
+    required this.visitDate,
     required this.visitSlot,
-    required this.specialInstruction,
-    required this.doorImage,
-    required this.finalRemarks,
-    required this.bookingStatus,
-    required this.clientPaid,
     required this.isDeleted,
-    required this.createdAt,
-    required this.updatedAt,
+    required this.propertyType,
+    required this.childPropertyType,
   });
 
-  factory Booking.fromJson(Map<String, dynamic> json) {
-    return Booking(
+  factory BookingIssueBooking.fromJson(Map<String, dynamic> json) {
+    return BookingIssueBooking(
       id: json['id'],
       clientName: json['clientName'],
       clientEmail: json['clientEmail'],
       clientContact: json['clientContact'],
-      checkTypeId: json['checkTypeId'],
-      addReInspection: json['addReInspection'],
-      ptParentId: json['ptParentId'],
-      ptChildId: json['ptChildId'],
-      numberOfBedrooms: json['numberOfBedrooms'],
       area: json['area'],
       community: json['community'],
       unit: json['unit'],
+      visitDate: json['visitDate'],
       visitSlot: json['visitSlot'],
-      specialInstruction: json['specialInstruction'],
-      doorImage: json['doorImage'],
-      finalRemarks: json['finalRemarks'],
-      bookingStatus: json['bookingStatus'],
-      clientPaid: json['clientPaid'],
       isDeleted: json['isDeleted'],
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+      propertyType: PropertyType.fromJson(json['bookingPropertytype']),
+      childPropertyType:
+          PropertyType.fromJson(json['bookingChildPropertytype']),
+    );
+  }
+}
+
+class IssueImage {
+  final int id;
+  final int bookingIssueId;
+  final String issueImageUrl;
+  final String notes;
+
+  IssueImage({
+    required this.id,
+    required this.bookingIssueId,
+    required this.issueImageUrl,
+    required this.notes,
+  });
+
+  factory IssueImage.fromJson(Map<String, dynamic> json) {
+    return IssueImage(
+      id: json['id'],
+      bookingIssueId: json['bookingIssueId'],
+      issueImageUrl: json['issueImageUrl'],
+      notes: json['notes'],
     );
   }
 }
 
 class User {
-  int id;
-  String firstName;
-  String lastName;
-  String email;
+  final int id;
+  final String firstName;
+  final String middleName;
+  final String lastName;
+  final String email;
 
   User({
     required this.id,
     required this.firstName,
+    required this.middleName,
     required this.lastName,
     required this.email,
   });
@@ -154,6 +158,7 @@ class User {
     return User(
       id: json['id'],
       firstName: json['firstName'],
+      middleName: json['middleName'] ?? '',
       lastName: json['lastName'],
       email: json['email'],
     );
@@ -161,9 +166,9 @@ class User {
 }
 
 class IssueType {
-  int id;
-  String name;
-  Subcategory subcategory;
+  final int id;
+  final String name;
+  final Subcategory subcategory;
 
   IssueType({
     required this.id,
@@ -181,9 +186,9 @@ class IssueType {
 }
 
 class Subcategory {
-  int id;
-  String name;
-  Category category;
+  final int id;
+  final String name;
+  final Category category;
 
   Subcategory({
     required this.id,
@@ -201,8 +206,8 @@ class Subcategory {
 }
 
 class Category {
-  int id;
-  String name;
+  final int id;
+  final String name;
 
   Category({
     required this.id,
@@ -218,8 +223,8 @@ class Category {
 }
 
 class RoomType {
-  int id;
-  String name;
+  final int id;
+  final String name;
 
   RoomType({
     required this.id,
@@ -234,17 +239,17 @@ class RoomType {
   }
 }
 
-class ChildRoomType {
-  int id;
-  String name;
+class PropertyType {
+  final int id;
+  final String name;
 
-  ChildRoomType({
+  PropertyType({
     required this.id,
     required this.name,
   });
 
-  factory ChildRoomType.fromJson(Map<String, dynamic> json) {
-    return ChildRoomType(
+  factory PropertyType.fromJson(Map<String, dynamic> json) {
+    return PropertyType(
       id: json['id'],
       name: json['name'],
     );

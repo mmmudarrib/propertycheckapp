@@ -1,14 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
-import 'package:propertycheckapp/features/add_issue/pages/add_issue.dart';
+import 'package:propertycheckapp/features/add_room/pagew/add_room.dart';
 import 'package:propertycheckapp/features/homepage/data/models/booking.dart';
-
-import '../../../widgets/rounded_button_widget.dart';
-import '../../add_issue/data/repo/issue_repo.dart';
-import '../../add_room/pagew/add_room.dart';
 
 class RoomListPage extends StatefulWidget {
   final Booking booking;
@@ -29,58 +24,112 @@ class _RoomListPageState extends State<RoomListPage> {
   }
 
   Future<List<Room>> fetchRooms() async {
-    // Fetch rooms
-    final roomResponse = await http.get(
-      Uri.parse(
-          'https://ilovebackend.propertycheck.me/api/bookingroomtype/roomlist/${widget.booking.id}'),
-    );
+    try {
+      // Fetch rooms
+      final roomResponse = await http.get(
+        Uri.parse(
+            'https://ilovebackend.propertycheck.me/api/bookingroomtype/roomlist/${widget.booking.id}'),
+      );
 
-    if (roomResponse.statusCode != 200) {
-      throw Exception('Failed to load rooms');
-    }
-
-    List<dynamic> roomListJson = jsonDecode(roomResponse.body);
-    List<Room> rooms = roomListJson.map((json) => Room.fromJson(json)).toList();
-
-    // Fetch issues for the booking
-    final issueResponse = await http.get(
-      Uri.parse(
-          'https://ilovebackend.propertycheck.me/api/bookingissue/bookingId/${widget.booking.id}'),
-    );
-
-    if (issueResponse.statusCode == 200) {
-      List<dynamic> issueListJson = jsonDecode(issueResponse.body);
-      List<RoomIssue> issues =
-          issueListJson.map((json) => RoomIssue.fromJson(json)).toList();
-
-      // Map the issues to each room based on rtParentId and rtChildId
-      for (var room in rooms) {
-        room.issueCount = issues
-            .where((issue) =>
-                issue.rtParentId == room.id && issue.rtChildId == room.childid)
-            .length;
+      if (roomResponse.statusCode != 200) {
+        throw Exception('Failed to load rooms');
       }
-    }
 
-    return rooms;
+      List<dynamic> roomListJson = jsonDecode(roomResponse.body);
+      List<Room> rooms =
+          roomListJson.map((json) => Room.fromJson(json)).toList();
+
+      // Fetch issues for the booking
+      final issueResponse = await http.get(
+        Uri.parse(
+            'https://ilovebackend.propertycheck.me/api/bookingissue/bookingId/${widget.booking.id}'),
+      );
+
+      if (issueResponse.statusCode == 200) {
+        List<dynamic> issueListJson = jsonDecode(issueResponse.body);
+        List<RoomIssue> issues =
+            issueListJson.map((json) => RoomIssue.fromJson(json)).toList();
+
+        // Map the issues to each room based on rtParentId and rtChildId
+        for (var room in rooms) {
+          room.issueCount = issues
+              .where((issue) =>
+                  issue.rtParentId == room.id &&
+                  issue.rtChildId == room.childid)
+              .length;
+          room.highPriorityCount = issues
+              .where((issue) =>
+                  issue.rtParentId == room.id &&
+                  issue.rtChildId == room.childid &&
+                  issue.severity == 'high')
+              .length;
+        }
+      }
+
+      return rooms;
+    } catch (e) {
+      // Log the error and rethrow for the FutureBuilder to catch
+      print(e);
+      throw Exception('Error fetching rooms or issues: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        foregroundColor: Colors.white,
-        title: const Text(
-          'Room List',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.black,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+    return SafeArea(
+      child: Scaffold(
+        backgroundColor: const Color(0xFF1D1D1B),
+        body: Column(
           children: [
+            Container(
+              color: const Color(0xFF242424),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  SizedBox(
+                    width: 100, // Adjust width as needed
+                    height: 50, // Adjust height as needed
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const Icon(
+                    Icons.power_settings_new,
+                    color: Color(0xff686866),
+                    size: 20, // Adjust size as needed
+                  ),
+                ],
+              ),
+            ),
+            Row(
+              children: [
+                IconButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new,
+                    color: Colors.white,
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    "# ${widget.booking.id.toString()} ROOMS",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontFamily: 'GothamBlack',
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis, // Handle overflow
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             Expanded(
               child: FutureBuilder<List<Room>>(
                 future: _rooms,
@@ -109,8 +158,8 @@ class _RoomListPageState extends State<RoomListPage> {
                       itemBuilder: (context, index) {
                         final room = rooms[index];
                         return Card(
-                          color: Colors.white,
-                          margin: const EdgeInsets.symmetric(vertical: 8.0),
+                          color: Colors.black,
+                          margin: const EdgeInsets.symmetric(vertical: 12.0),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10.0),
                           ),
@@ -118,49 +167,73 @@ class _RoomListPageState extends State<RoomListPage> {
                             title: Text(
                               room.childRoomTypeName,
                               style: const TextStyle(
-                                fontSize: 18.0,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
+                                fontFamily: "GothamBlack",
+                                fontSize: 20.0,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
                               ),
                             ),
                             subtitle: Text(
                               room.roomTypeName,
                               style: const TextStyle(
                                 fontSize: 16.0,
-                                color: Colors.grey,
+                                fontFamily: "GothamBook",
+                                fontWeight: FontWeight.w400,
+                                color: Colors.white,
                               ),
                             ),
-                            trailing: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12.0, vertical: 6.0),
-                              decoration: BoxDecoration(
-                                color: room.issueCount == 0
-                                    ? Colors.red
-                                    : Colors.green,
-                                borderRadius: BorderRadius.circular(12.0),
-                              ),
-                              child: Text(
-                                '${room.issueCount} Issues',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => AddIssuePage(
-                                    booking: widget.booking,
-                                    bookingRoomType: room,
-                                    repository:
-                                        RepositoryProvider.of<IssueRepository>(
-                                            context),
+                            trailing: SizedBox(
+                              width: 100,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Image.asset(
+                                        "assets/images/priority-active.png",
+                                        width: 25,
+                                        height: 25,
+                                      ),
+                                      const SizedBox(
+                                        width: 2.0,
+                                      ),
+                                      Text(
+                                        room.issueCount.toString(),
+                                        style: const TextStyle(
+                                          fontSize: 12.0,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    ],
                                   ),
-                                ),
-                              );
-                            },
+                                  const SizedBox(
+                                    width: 10,
+                                  ),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Image.asset(
+                                        "assets/images/priority-red.png",
+                                        width: 25,
+                                        height: 25,
+                                      ),
+                                      const SizedBox(
+                                        height: 2.0,
+                                      ),
+                                      Text(
+                                        room.highPriorityCount.toString(),
+                                        style: const TextStyle(
+                                          fontSize: 12.0,
+                                          color: Colors.red,
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            onTap: () {},
                           ),
                         );
                       },
@@ -169,18 +242,68 @@ class _RoomListPageState extends State<RoomListPage> {
                 },
               ),
             ),
-            RoundedButton(
-              text: "Add New Room",
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AddRoomPage(
-                      booking: widget.booking,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    // Add your delete action here
+                  },
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: const Color(0xffEF4444),
+                    backgroundColor:
+                        const Color(0xffFFD5D5), // Text color (red)
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      // Border color
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 60,
+                      vertical: 10,
                     ),
                   ),
-                );
-              },
+                  child: const Text(
+                    'Delete',
+                    style: TextStyle(
+                      fontFamily: "GothamBold",
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 5), // Space between buttons
+                // Add Button
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            AddRoomPage(booking: widget.booking),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor:
+                        const Color(0xff008138), // Text color (red)
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      // Border color
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 60,
+                      vertical: 10,
+                    ),
+                  ),
+                  child: const Text(
+                    'Add',
+                    style: TextStyle(
+                      fontFamily: "GothamBold",
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -194,7 +317,8 @@ class Room {
   final int childid;
   final String roomTypeName;
   final String childRoomTypeName;
-  int issueCount; // Add this field to store the issue count
+  int issueCount;
+  int highPriorityCount;
 
   Room({
     required this.id,
@@ -202,14 +326,15 @@ class Room {
     required this.roomTypeName,
     required this.childRoomTypeName,
     this.issueCount = 0,
+    this.highPriorityCount = 0,
   });
 
   factory Room.fromJson(Map<String, dynamic> json) {
     return Room(
-      id: json['bookingroomtypeRoomtype.id'],
-      childid: json['bookingroomtypeChildRoomtype.id'],
-      roomTypeName: json['bookingroomtypeRoomtype.name'],
-      childRoomTypeName: json['bookingroomtypeChildRoomtype.name'],
+      id: json['bookingroomtypeRoomtype.id'] ?? 0,
+      childid: json['bookingroomtypeChildRoomtype.id'] ?? 0,
+      roomTypeName: json['bookingroomtypeRoomtype.name'] ?? 'Unknown',
+      childRoomTypeName: json['bookingroomtypeChildRoomtype.name'] ?? 'Unknown',
     );
   }
 }
@@ -217,13 +342,17 @@ class Room {
 class RoomIssue {
   final int rtParentId;
   final int rtChildId;
-
-  RoomIssue({required this.rtParentId, required this.rtChildId});
+  final String severity;
+  RoomIssue(
+      {required this.rtParentId,
+      required this.rtChildId,
+      required this.severity});
 
   factory RoomIssue.fromJson(Map<String, dynamic> json) {
     return RoomIssue(
-      rtParentId: json['rtParentId'],
-      rtChildId: json['rtChildId'],
+      rtParentId: json['rtParentId'] ?? 0,
+      rtChildId: json['rtChildId'] ?? 0,
+      severity: json['severity'] ?? '',
     );
   }
 }

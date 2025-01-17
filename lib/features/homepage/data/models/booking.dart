@@ -55,9 +55,13 @@ class Booking extends HiveObject {
   @HiveField(26)
   String? bookingChildPropertytype;
   @HiveField(28)
-  double? latitude;
+  String? latitude;
   @HiveField(29)
-  double? longitude;
+  String? longitude;
+  @HiveField(30)
+  String? checkType;
+  @HiveField(31)
+  String? bookingChildPropertytypeName;
   Booking(
       {required this.id,
       required this.clientName,
@@ -84,14 +88,16 @@ class Booking extends HiveObject {
       required this.bookingChildPropertytype,
       required this.mainDoorImage,
       required this.doorImageTimestamp,
+      required this.bookingChildPropertytypeName,
       this.latitude,
-      this.longitude});
+      this.longitude,
+      this.checkType});
 
   factory Booking.fromJson(Map<String, dynamic> json) {
     return Booking(
       id: json['id'],
-      latitude: json['longitude'],
-      longitude: json['latitude'],
+      latitude: json['bookinginspectorBooking']['longitude'],
+      longitude: json['bookinginspectorBooking']['latitude'],
       clientName: json['bookinginspectorBooking']['clientName'],
       clientEmail: json['bookinginspectorBooking']['clientEmail'],
       clientContact: json['bookinginspectorBooking']['clientContact'],
@@ -110,6 +116,9 @@ class Booking extends HiveObject {
       bookingChildPropertytype: json['bookinginspectorBooking']
               ['bookingChildPropertytype']['id']
           .toString(),
+      bookingChildPropertytypeName: json['bookinginspectorBooking']
+              ['bookingChildPropertytype']['name']
+          .toString(),
       clientPaid: json['bookinginspectorBooking']['clientPaid'],
       isDeleted: json['isDeleted'],
       createdAt: DateTime.parse(json['bookinginspectorBooking']['createdAt']),
@@ -123,6 +132,7 @@ class Booking extends HiveObject {
           (json['bookinginspectorBooking']['bookingBookingroomtype'] as List)
               .map((i) => BookingRoomType.fromJson(i))
               .toList(),
+      checkType: json['bookinginspectorBooking']['bookingChecktype']['name'],
     );
   }
 

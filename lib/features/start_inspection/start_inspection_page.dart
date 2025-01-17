@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -10,7 +11,6 @@ import 'package:path/path.dart' as path;
 import 'package:propertycheckapp/features/homepage/data/models/booking.dart';
 
 import '../../widgets/rounded_button_widget.dart';
-import '../issue_list/pages/issue_list.dart';
 
 class StartInspectionScreen extends StatefulWidget {
   final Booking booking;
@@ -65,11 +65,14 @@ class _StartInspectionScreenState extends State<StartInspectionScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   (booking.mainDoorImage != null)
-                      ? Image.network(
-                          booking.mainDoorImage!,
-                          width: 200,
-                          height: 200,
-                          fit: BoxFit.cover,
+                      ? CachedNetworkImage(
+                          imageUrl: booking.mainDoorImage!,
+                          progressIndicatorBuilder:
+                              (context, url, downloadProgress) =>
+                                  CircularProgressIndicator(
+                                      value: downloadProgress.progress),
+                          errorWidget: (context, url, error) =>
+                              const Icon(Icons.error),
                         )
                       : (_image != null)
                           ? Image.file(
@@ -140,14 +143,7 @@ class _StartInspectionScreenState extends State<StartInspectionScreen> {
                           loading = true;
                         });
                         await _uploadImage();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => IssueListPage(
-                              booking: booking,
-                            ),
-                          ),
-                        );
+
                         setState(() {
                           loading = false;
                         });

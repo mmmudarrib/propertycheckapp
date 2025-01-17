@@ -1,15 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as path;
 import 'package:propertycheckapp/widgets/rounded_button_widget.dart';
 
 import '../../homepage/data/models/booking.dart';
-import '../../issue_list/pages/issue_list.dart';
 import '../../rooms_list/pages/rooms_list.dart';
 import '../bloc/booking_issue_bloc.dart';
 import '../bloc/booking_issue_event.dart';
@@ -51,17 +53,22 @@ class _AddIssuePageState extends State<AddIssuePage> {
   int _currentIndex = 0;
   final ImagePicker _picker = ImagePicker();
   List<String> imageUrls = [];
+  Map<String, String> imageNotes =
+      {}; // Use a map to associate each image URL with its note
   String _severity = 'Low'; // Default severity
   String _notes = '';
   String _issueStatus = 'Passed'; // Default issue status
+  int? _bookingIssueId;
   @override
   void initState() {
     super.initState();
+    print("Init State called, loading categories");
     context.read<IssueFormBloc>().add(LoadCategories());
   }
 
   @override
   Widget build(BuildContext context) {
+    print("Building AddIssuePage widget");
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -75,19 +82,24 @@ class _AddIssuePageState extends State<AddIssuePage> {
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   imageUrls.isNotEmpty ? _buildImageCarousel() : Container(),
                   const SizedBox(height: 16.0),
                   RoundedButton(
-                    text: imageUrls.isEmpty ? "Add Image" : "Add More Images",
+                    text: imageUrls.isEmpty
+                        ? "Add from Library"
+                        : "Add More from Library",
                     onPressed: _selectImageFromGallery,
                   ),
                   const SizedBox(height: 16.0),
                   RoundedButton(
-                    text: "Capture Image",
+                    text: "Add Images",
                     onPressed: _captureImageFromCamera,
                   ),
                   const SizedBox(height: 16.0),
+                  _buildImageNotesSection(), // Add image notes section
+                  const SizedBox(height: 32.0),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -108,11 +120,14 @@ class _AddIssuePageState extends State<AddIssuePage> {
                   const SizedBox(height: 32.0),
                   BlocConsumer<IssueFormBloc, IssueFormState>(
                     listener: (context, state) {
+                      print("BlocConsumer Listener state: \$state");
                       if (state is CategoriesLoaded ||
                           state is SubcategoriesLoaded ||
                           state is IssueTypesLoaded) {
                         setState(() {
                           if (state is CategoriesLoaded) {
+                            print(
+                                "Categories loaded: \${state.categories.length}");
                             _categories = state.categories;
                             _subcategories = [];
                             _selectedSubcategory = null;
@@ -120,6 +135,8 @@ class _AddIssuePageState extends State<AddIssuePage> {
                             _selectedIssueType = null;
                             _selectedIssueTypeId = null;
                           } else if (state is SubcategoriesLoaded) {
+                            print(
+                                "Subcategories loaded: \${state.subcategories.length}");
                             _subcategories = state.subcategories;
                             _selectedIssueType = null;
                             _selectedIssueTypeId = null;
@@ -128,6 +145,7 @@ class _AddIssuePageState extends State<AddIssuePage> {
                       }
                     },
                     builder: (context, state) {
+                      print("BlocConsumer Builder state: \$state");
                       if (state is IssueFormLoading) {
                         return const Center(child: CircularProgressIndicator());
                       } else if (state is CategoriesLoaded) {
@@ -158,6 +176,7 @@ class _AddIssuePageState extends State<AddIssuePage> {
                           ],
                         );
                       } else if (state is IssueFormError) {
+                        print("Error loading form: \${state.errorMessage}");
                         return _buildErrorText(state.errorMessage);
                       } else {
                         return const SizedBox.shrink();
@@ -182,6 +201,7 @@ class _AddIssuePageState extends State<AddIssuePage> {
                     }).toList(),
                     onChanged: (value) {
                       setState(() {
+                        print("Severity selected: \$value");
                         _severity = value ?? 'Low';
                       });
                     },
@@ -196,7 +216,7 @@ class _AddIssuePageState extends State<AddIssuePage> {
                   ),
                   const SizedBox(height: 32.0),
                   const Text(
-                    "Notes:",
+                    "Description:",
                     style: TextStyle(
                         color: Colors.white, fontWeight: FontWeight.bold),
                   ),
@@ -205,6 +225,7 @@ class _AddIssuePageState extends State<AddIssuePage> {
                     maxLines: 4,
                     onChanged: (value) {
                       setState(() {
+                        print("Notes updated: \$value");
                         _notes = value;
                       });
                     },
@@ -225,7 +246,7 @@ class _AddIssuePageState extends State<AddIssuePage> {
                   const SizedBox(height: 16.0),
                   DropdownButtonFormField<String>(
                     value: _issueStatus,
-                    items: ['Passed', 'On Risk', 'Failed'].map((status) {
+                    items: ['Passed', 'At Risk', 'Failed'].map((status) {
                       return DropdownMenuItem(
                         value: status,
                         child: Text(status,
@@ -234,6 +255,7 @@ class _AddIssuePageState extends State<AddIssuePage> {
                     }).toList(),
                     onChanged: (value) {
                       setState(() {
+                        print("Issue Status selected: \$value");
                         _issueStatus = value ?? 'Passed';
                       });
                     },
@@ -250,6 +272,7 @@ class _AddIssuePageState extends State<AddIssuePage> {
                   RoundedButton(
                     text: "Submit Issue",
                     onPressed: () async {
+                      print("Submit Issue button pressed");
                       if (_selectedCategory != null &&
                           _selectedSubcategory != null &&
                           _selectedIssueType != null &&
@@ -257,7 +280,7 @@ class _AddIssuePageState extends State<AddIssuePage> {
                         setState(() {
                           _loading = true;
                         });
-                        await _submitIssue(
+                        _bookingIssueId = await _submitIssue(
                             widget.booking.id,
                             "",
                             widget.bookingRoomType.id,
@@ -267,6 +290,9 @@ class _AddIssuePageState extends State<AddIssuePage> {
                             _issueStatus,
                             _notes,
                             widget.booking.inspectorId);
+                        if (_bookingIssueId != null) {
+                          await _uploadAllImages();
+                        }
                         setState(() {
                           _loading = false;
                         });
@@ -275,15 +301,8 @@ class _AddIssuePageState extends State<AddIssuePage> {
                               content:
                                   Text('Issue record added successfully!')),
                         );
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => IssueListPage(
-                              booking: widget.booking,
-                            ),
-                          ),
-                        );
                       } else {
+                        print("Validation failed: Missing required fields");
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                               content:
@@ -299,40 +318,85 @@ class _AddIssuePageState extends State<AddIssuePage> {
   }
 
   Future<void> _selectImageFromGallery() async {
+    print("Selecting image from gallery");
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
       setState(() {
+        print("Image selected: \${image.path}");
         imageUrls.add(image.path);
+        imageNotes[image.path] =
+            ''; // Initialize an empty note for the new image
       });
     }
   }
 
   Future<void> _captureImageFromCamera() async {
+    print("Capturing image from camera");
     final XFile? image = await _picker.pickImage(source: ImageSource.camera);
     if (image != null) {
       setState(() {
+        print("Image captured: \${image.path}");
         imageUrls.add(image.path);
+        imageNotes[image.path] =
+            ''; // Initialize an empty note for the new image
       });
     }
   }
 
   Widget _buildImageCarousel() {
+    print("Building image carousel");
     return CarouselSlider(
       items: imageUrls.map((url) {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(8.0),
-          child: Image.file(
-            File(url),
-            fit: BoxFit.cover,
-            width: MediaQuery.of(context).size.width * 0.8,
+        return Container(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: Column(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8.0),
+                child: Image.file(
+                  File(url),
+                  fit: BoxFit.cover,
+                  width: MediaQuery.of(context).size.width * 0.8,
+                  height: 200,
+                ),
+              ),
+              const SizedBox(height: 8.0),
+              TextField(
+                maxLines: 1,
+                onChanged: (value) {
+                  setState(() {
+                    print("Note for image updated: \$value");
+                    imageNotes[url] = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  hintTextDirection: TextDirection.ltr,
+                  hintText: "Enter Description for this image",
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                ),
+                controller: TextEditingController.fromValue(
+                  TextEditingValue(
+                    text: imageNotes[url] ?? '',
+                    selection: TextSelection.collapsed(
+                      offset: imageNotes[url]?.length ?? 0,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       }).toList(),
       options: CarouselOptions(
-        height: 250.0,
+        height: 300.0,
         enlargeCenterPage: true,
         onPageChanged: (index, reason) {
           setState(() {
+            print("Carousel page changed: index=\$index, reason=\$reason");
             _currentIndex = index;
           });
         },
@@ -340,7 +404,59 @@ class _AddIssuePageState extends State<AddIssuePage> {
     );
   }
 
+  Widget _buildImageNotesSection() {
+    print("Building image notes section");
+    return imageUrls.isNotEmpty
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Image Description:",
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16.0),
+              ...List.generate(imageUrls.length, (index) {
+                String url = imageUrls[index];
+                return Column(
+                  children: [
+                    TextField(
+                      maxLines: 2,
+                      onChanged: (value) {
+                        setState(() {
+                          print("Note for image ${index + 1} updated: \$value");
+                          imageNotes[url] = value;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintTextDirection: TextDirection.ltr,
+                        hintText: "Enter Description for image ${index + 1}",
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                      ),
+                      controller: TextEditingController.fromValue(
+                        TextEditingValue(
+                          text: imageNotes[url] ?? '',
+                          selection: TextSelection.collapsed(
+                            offset: imageNotes[url]?.length ?? 0,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16.0),
+                  ],
+                );
+              }),
+            ],
+          )
+        : Container();
+  }
+
   Widget _buildCategoryDropdown(List<Category> categories) {
+    print("Building category dropdown");
     return DropdownButtonFormField<String>(
       value: _selectedCategoryId,
       items: categories.map((category) {
@@ -352,6 +468,7 @@ class _AddIssuePageState extends State<AddIssuePage> {
       }).toList(),
       onChanged: (value) {
         setState(() {
+          print("Category selected: \${value}");
           _selectedCategoryId = value;
           _selectedCategory = categories
               .firstWhere((category) => category.id.toString() == value)
@@ -376,6 +493,7 @@ class _AddIssuePageState extends State<AddIssuePage> {
   }
 
   Widget _buildSubcategoryDropdown(List<Subcategory> subcategories) {
+    print("Building subcategory dropdown");
     return DropdownButtonFormField<String>(
       value: _selectedSubcategoryId,
       items: subcategories.map((subcategory) {
@@ -387,6 +505,7 @@ class _AddIssuePageState extends State<AddIssuePage> {
       }).toList(),
       onChanged: (value) {
         setState(() {
+          print("Subcategory selected: \${value}");
           _selectedSubcategoryId = value;
           _selectedSubcategory = subcategories
               .firstWhere((subcategory) => subcategory.id.toString() == value)
@@ -409,6 +528,7 @@ class _AddIssuePageState extends State<AddIssuePage> {
   }
 
   Widget _buildIssueTypeDropdown(IssueTypesLoaded state) {
+    print("Building issue type dropdown");
     return DropdownButtonFormField<String>(
       value: _selectedIssueTypeId,
       items: state.issueTypes.map((issueType) {
@@ -420,6 +540,7 @@ class _AddIssuePageState extends State<AddIssuePage> {
       }).toList(),
       onChanged: (value) {
         setState(() {
+          print("Issue type selected: \${value}");
           _selectedIssueTypeId = value;
           _selectedIssueType = state.issueTypes
               .firstWhere((issueType) => issueType.id.toString() == value)
@@ -438,13 +559,14 @@ class _AddIssuePageState extends State<AddIssuePage> {
   }
 
   Widget _buildErrorText(String errorMessage) {
+    print("Building error text widget with message: \$errorMessage");
     return Text(
       'Error: $errorMessage',
       style: const TextStyle(color: Colors.red),
     );
   }
 
-  Future<void> _submitIssue(
+  Future<int?> _submitIssue(
       int bookingId,
       String desc,
       int roompt,
@@ -468,6 +590,7 @@ class _AddIssuePageState extends State<AddIssuePage> {
       "issueImage": "https://example.com/images/crack_wall.jpg"
     });
 
+    print("Submitting issue with data: \$body");
     try {
       final response = await http.post(
         Uri.parse(url),
@@ -476,15 +599,79 @@ class _AddIssuePageState extends State<AddIssuePage> {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Success
-        print("Issue submitted successfully.");
-      } else {
-        // Error handling
+        final responseData = jsonDecode(response.body);
         print(
-            "Failed to submit the issue. Status code: ${response.statusCode}");
+            "Issue submitted successfully. Response ID: \${responseData['id']}");
+        return responseData['id'];
+      } else {
+        print(
+            "Failed to submit the issue. Status code: \${response.statusCode}");
       }
     } catch (e) {
       print("An error occurred while submitting the issue: $e");
     }
+    return null;
   }
+
+  Future<void> _uploadAllImages() async {
+    print("Uploading all images to Firebase");
+    List<Map<String, String>> uploadedImages = [];
+    for (String imagePath in imageUrls) {
+      try {
+        final random = Random();
+        String fileName =
+            '${random.nextInt(1000000)}${path.extension(imagePath)}';
+
+        Reference firebaseStorageRef =
+            FirebaseStorage.instance.ref().child('uploads/$fileName');
+
+        UploadTask uploadTask = firebaseStorageRef.putFile(File(imagePath));
+        TaskSnapshot taskSnapshot = await uploadTask;
+
+        String downloadURL = await taskSnapshot.ref.getDownloadURL();
+        print("Image uploaded successfully. URL: \$downloadURL");
+        uploadedImages.add({
+          "bookingIssueId": _bookingIssueId.toString(),
+          "issueImageUrl": downloadURL,
+          "notes": imageNotes[imagePath] ?? '',
+        });
+      } catch (e) {
+        print('Error uploading image: $e');
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Failed to upload one or more images.'),
+        ));
+      }
+    }
+
+    if (uploadedImages.isNotEmpty) {
+      await _submitImageUrls(uploadedImages);
+    }
+  }
+
+  Future<void> _submitImageUrls(
+      List<Map<String, String>> uploadedImages) async {
+    const url =
+        'https://ilovebackend.propertycheck.me/api/bookingissueimage/bulk';
+    final body = jsonEncode({"data": uploadedImages});
+
+    print("Submitting uploaded images with data: \$body");
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {"Content-Type": "application/json"},
+        body: body,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print("Image URLs submitted successfully.");
+      } else {
+        print(
+            "Failed to submit image URLs. Status code: \${response.statusCode}");
+      }
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  
 }

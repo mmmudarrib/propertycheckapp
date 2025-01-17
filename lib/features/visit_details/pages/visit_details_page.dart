@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:propertycheckapp/constants.dart';
 import 'package:propertycheckapp/features/homepage/data/models/booking.dart';
-import 'package:propertycheckapp/features/issue_list/pages/issue_list.dart';
 import 'package:propertycheckapp/widgets/rounded_button_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -75,13 +74,7 @@ class VisitDetailPage extends StatelessWidget {
                           const TextStyle(fontSize: 16.0, color: Colors.white),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.navigation),
-                    color: AppColors.primaryColor,
-                    onPressed: () {
-                      openMap(booking.latitude, booking.longitude);
-                    },
-                  ),
+                  const SizedBox.shrink(),
                 ],
               ),
               const SizedBox(height: 8.0),
@@ -96,19 +89,28 @@ class VisitDetailPage extends StatelessWidget {
               _buildNotesSection(booking.specialInstruction),
               const SizedBox(height: 20.0),
               _buildClientInfoSection(context),
+              if (booking.mainDoorImage != null) ...[
+                const SizedBox(height: 20.0),
+                const Text(
+                  'Main Door Image:',
+                  style: TextStyle(
+                      fontSize: 18.0,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
+                ),
+                const SizedBox(height: 8.0),
+                Image.network(
+                  booking.mainDoorImage!,
+                  height: 200.0,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ],
+              const SizedBox(height: 20.0),
               (booking.bookingStatus == "In Progress")
                   ? RoundedButton(
                       text: "Continue Inspection",
-                      onPressed: () async {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => IssueListPage(
-                              booking: booking,
-                            ),
-                          ),
-                        );
-                      },
+                      onPressed: () async {},
                       color: AppColors.primaryColor,
                     )
                   : RoundedButton(
@@ -230,23 +232,39 @@ class VisitDetailPage extends StatelessWidget {
   }
 
   void _openWhatsApp(String phoneNumber) async {
-    final Uri url = Uri.parse("https://wa.me/$phoneNumber");
-
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url);
-    } else {
-      throw 'Could not open WhatsApp for $phoneNumber';
+    final Uri googleMapsUrl = Uri.parse("https://wa.me/$phoneNumber");
+    try {
+      bool canOpen = await canLaunchUrl(googleMapsUrl);
+      if (canOpen) {
+        await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback to opening in browser if unable to launch Google Maps
+        await launchUrl(googleMapsUrl,
+            mode: LaunchMode.externalNonBrowserApplication);
+      }
+    } catch (e) {
+      print("Error opening map: $e");
     }
   }
 
-  void openMap(double? latitude, double? longitude) async {
-    final url =
-        'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude';
+  void openMap(String? latitude, String? longitude) async {
+    if (latitude == null || longitude == null) {
+      throw 'Invalid coordinates provided.';
+    }
 
-    if (await canLaunch(url)) {
-      await launch(url);
-    } else {
-      throw 'Could not open the map.';
+    final Uri googleMapsUrl = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude');
+
+    try {
+      bool canOpen = await canLaunchUrl(googleMapsUrl);
+      if (canOpen) {
+        await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback to opening in browser if unable to launch Google Maps
+        await launchUrl(googleMapsUrl, mode: LaunchMode.inAppWebView);
+      }
+    } catch (e) {
+      print("Error opening map: $e");
     }
   }
 

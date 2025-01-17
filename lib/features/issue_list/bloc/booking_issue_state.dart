@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
-import 'package:propertycheckapp/features/issue_list/data/model/issue_list.dart';
+
+import '../data/model/booking_issue.dart';
 
 // Abstract class for all states
 abstract class IssueListState extends Equatable {
@@ -15,7 +16,7 @@ class IssueListLoading extends IssueListState {}
 
 // Loaded state when issues are fetched successfully
 class IssueListLoaded extends IssueListState {
-  final List<Issue> issues;
+  final List<BookingIssue> issues;
 
   IssueListLoaded(this.issues);
 

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:propertycheckapp/features/homepage/data/models/booking.dart';
 
-import '../../../constants.dart';
 import '../../../widgets/rounded_button_widget.dart';
 import '../../rooms_list/pages/rooms_list.dart';
 
@@ -166,7 +165,7 @@ class _AddRoomPageState extends State<AddRoomPage> {
         ),
         const SizedBox(height: 8.0),
         DropdownButtonFormField<String>(
-          dropdownColor: AppColors.primaryColor,
+          dropdownColor: Colors.grey.shade800,
           value: value,
           decoration: const InputDecoration(
             labelStyle: TextStyle(color: Colors.white),

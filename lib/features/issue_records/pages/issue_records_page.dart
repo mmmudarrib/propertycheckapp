@@ -45,7 +45,9 @@ class _IssueRecordPageState extends State<IssueRecordPage> {
               imageUrls.isNotEmpty ? _buildImageCarousel() : Container(),
               const SizedBox(height: 16.0),
               RoundedButton(
-                text: imageUrls.isEmpty ? "Add Image" : "Add More Images",
+                text: imageUrls.isEmpty
+                    ? "Add from Library"
+                    : "Add More from Library",
                 onPressed: _selectImageFromGallery,
               ),
               const SizedBox(height: 16.0),

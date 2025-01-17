@@ -42,15 +42,17 @@ class BookingAdapter extends TypeAdapter<Booking> {
       bookingChildPropertytype: fields[26] as String?,
       mainDoorImage: fields[25] as String?,
       doorImageTimestamp: fields[27] as String?,
-      latitude: fields[28] as double?,
-      longitude: fields[29] as double?,
+      bookingChildPropertytypeName: fields[31] as String?,
+      latitude: fields[28] as String?,
+      longitude: fields[29] as String?,
+      checkType: fields[30] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Booking obj) {
     writer
-      ..writeByte(27)
+      ..writeByte(29)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -104,7 +106,11 @@ class BookingAdapter extends TypeAdapter<Booking> {
       ..writeByte(28)
       ..write(obj.latitude)
       ..writeByte(29)
-      ..write(obj.longitude);
+      ..write(obj.longitude)
+      ..writeByte(30)
+      ..write(obj.checkType)
+      ..writeByte(31)
+      ..write(obj.bookingChildPropertytypeName);
   }
 
   @override

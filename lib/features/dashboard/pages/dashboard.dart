@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../homepage/pages/homepage.dart';
-import '../../login/pages/login_page.dart';
+import '../../homepage/data/datasources/booking_local_datasource.dart';
+import '../../homepage/data/datasources/booking_remote_datasource.dart';
+import '../../homepage/data/models/booking.dart';
+import '../../homepage/data/repository/booking_repo.dart';
+import '../../homepage/pages/new_homepage.dart';
+import '../../homepage/pages/new_homepage_unsectioned.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -12,90 +16,190 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  int _selectedIndex = 0;
+  int _currentIndex = 0;
+  List<Booking> bookingData = [];
+  bool loading = false;
+  String? errorMessage;
+  @override
+  void initState() {
+    _loadAllBookings();
+    super.initState();
+  }
 
-  final List<Widget> _pages = [
-    const HomeScreen(),
-    const ProfileScreen(),
-  ];
+  void _loadAllBookings() async {
+    try {
+      print("Loading all bookings...");
+      setState(() {
+        loading = true;
+        errorMessage = null;
+      });
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+      BookingRepository repository = BookingRepository(
+        remoteDataSource: BookingRemoteDataSource(),
+        localDataSource: BookingLocalDataSource(),
+      );
+
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final int? userId = prefs.getInt('userId');
+      print("Retrieved userId: $userId");
+
+      if (userId != null) {
+        var bookingD = await repository.getAllBookings(userId);
+
+        if (bookingD != null) {
+          setState(() {
+            bookingData = bookingD;
+          });
+        }
+        setState(() {
+          loading = false;
+        });
+      } else {
+        print("User ID not found.");
+        setState(() {
+          loading = false;
+          errorMessage = "User ID not found. Please log in again.";
+        });
+      }
+    } catch (e) {
+      print("Error loading bookings: \$e");
+      setState(() {
+        loading = false;
+        errorMessage = "Failed to load bookings: \${e.toString()}";
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: Image.asset(
-          'assets/images/logo.png',
-          width: 100,
-          height: 50,
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.notifications,
-              color: Colors.white,
-            ),
-            onPressed: () {
-              // Handle notifications
-            },
-          ),
-          IconButton(
-            icon: const Icon(
-              Icons.logout,
-              color: Colors.white,
-            ),
-            onPressed: () async {
-              final SharedPreferences prefs =
-                  await SharedPreferences.getInstance();
-              prefs.clear();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-              );
-            },
-          ),
-        ],
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    final yesterday = today.subtract(const Duration(days: 1));
+    int plannedCount = bookingData
+        .where((b) =>
+            b.bookingStatus == "Planned" &&
+            DateTime.parse(b.visitDate).isAfter(yesterday))
+        .toList()
+        .length;
+    int progressCount = bookingData
+        .where((b) =>
+            b.bookingStatus == "In Progress" &&
+            DateTime.parse(b.visitDate).isAfter(yesterday))
+        .toList()
+        .length;
+    int completedCount = bookingData
+        .where((b) =>
+            b.bookingStatus == "Completed" &&
+            DateTime.parse(b.visitDate).isAfter(yesterday))
+        .toList()
+        .length;
+    final statuses = [
+      NewHomepage(
+        bookingStatus: "Planned",
+        bookingData: bookingData,
+        errorMessage: errorMessage,
       ),
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        unselectedLabelStyle: const TextStyle(color: Colors.white),
-        selectedLabelStyle: const TextStyle(color: Colors.white),
-        backgroundColor: Colors.black,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.home,
-              color: Colors.white,
-            ),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.person,
-              color: Colors.white,
-            ),
-            label: 'Profile',
-          ),
-        ],
+      NewHomepage(
+        bookingStatus: "In Progress",
+        bookingData: bookingData,
+        errorMessage: errorMessage,
       ),
+      NewHomepageUnSectioned(
+        bookingStatus: "Completed",
+        bookingData: bookingData,
+        errorMessage: errorMessage,
+      ),
+    ];
+
+    return SafeArea(
+      child: (loading)
+          ? const Scaffold(
+              backgroundColor: Color(0xFF1D1D1B),
+              body: Center(
+                child: CircularProgressIndicator.adaptive(),
+              ))
+          : Scaffold(
+              backgroundColor: const Color(0xFF1D1D1B),
+              body: Column(
+                children: [
+                  Container(
+                    color: const Color(0xFF242424),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        SizedBox(
+                          width: 100, // Adjust width as needed
+                          height: 50, // Adjust height as needed
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        const Icon(
+                          Icons.power_settings_new,
+                          color: Color(0xff686866),
+                          size: 20, // Adjust size as needed
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  Expanded(
+                    child: statuses[_currentIndex],
+                  ),
+                ],
+              ),
+              bottomNavigationBar: BottomNavigationBar(
+                selectedLabelStyle: const TextStyle(
+                  fontFamily: 'GothamBook',
+                  fontWeight: FontWeight.w400,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontFamily: 'GothamBook',
+                  fontWeight: FontWeight.w400,
+                ),
+                items: [
+                  _buildBottomNavItem("Planned ($plannedCount)", Icons.star, 0),
+                  _buildBottomNavItem(
+                      "In Progress ($progressCount)", Icons.star, 1),
+                  _buildBottomNavItem(
+                      "Completed ($completedCount)", Icons.star, 2),
+                ],
+                currentIndex: _currentIndex,
+                selectedItemColor: Colors.white,
+                unselectedItemColor: Colors.grey,
+                backgroundColor: const Color(0xFF1D1D1B),
+                onTap: (index) {
+                  setState(() {
+                    _currentIndex = index;
+                  });
+                },
+              ),
+            ),
     );
   }
-}
 
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('Profile'));
+  BottomNavigationBarItem _buildBottomNavItem(
+      String label, IconData icon, int index) {
+    return BottomNavigationBarItem(
+      icon: Column(
+        children: [
+          if (_currentIndex == index)
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              height: 2,
+              width: 80,
+              color: Colors.white, // Selected indicator
+            ),
+          Icon(icon),
+        ],
+      ),
+      label: label,
+    );
   }
 }
