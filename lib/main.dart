@@ -13,7 +13,7 @@ import 'features/issue_list/data/datasource/booking_issue_remote_datasource.dart
 import 'features/issue_list/data/repo/booking_issue_repo.dart';
 import 'features/splash/pages/splash.dart';
 
-void main() async {
+                                   void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 

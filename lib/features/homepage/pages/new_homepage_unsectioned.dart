@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../report_comments_page/pages/report_comments_page.dart';
 import '../data/models/booking.dart';
 
 class NewHomepageUnSectioned extends StatefulWidget {
@@ -92,7 +93,16 @@ class _NewHomepageUnSectionedState extends State<NewHomepageUnSectioned> {
   Widget buildVisitCard(Booking visit) {
     print("Building visit card for: $visit");
     return InkWell(
-      onTap: () {},
+      onTap: () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ReportCommentsPage(
+              booking: visit,
+            ),
+          ),
+        );
+      },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         width: double.infinity,
@@ -224,7 +234,7 @@ class _NewHomepageUnSectionedState extends State<NewHomepageUnSectioned> {
         ),
       ),
     );
-}
+  }
 
   Widget buildEmptyMessage() {
     print("Building empty message UI.");

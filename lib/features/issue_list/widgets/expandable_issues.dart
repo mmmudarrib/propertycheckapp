@@ -33,13 +33,14 @@ class _ExpandableIssuesWidgetState extends State<ExpandableIssuesWidget> {
             children: [
               Image.asset(
                 "assets/images/priority-active.png",
-                width: 25,
-                height: 25,
+                width: 20,
+                height: 20,
               ), // Icon
               const SizedBox(width: 8),
               Text(
                 'Issues - $totalIssues',
                 style: const TextStyle(
+                  fontSize: 11,
                   color: Colors.white,
                   fontFamily: 'GothamBook',
                   fontWeight: FontWeight.w400,
@@ -60,13 +61,14 @@ class _ExpandableIssuesWidgetState extends State<ExpandableIssuesWidget> {
             children: [
               Image.asset(
                 "assets/images/priority-red.png",
-                width: 25,
-                height: 25,
+                width: 20,
+                height: 20,
               ), // Icon
               const SizedBox(width: 8),
               Text(
                 'High Priority - $highPriorityIssues',
                 style: TextStyle(
+                  fontSize: 11,
                   color: Colors.red[900],
                   fontFamily: 'GothamBook',
                   fontWeight: FontWeight.w400,
@@ -76,25 +78,6 @@ class _ExpandableIssuesWidgetState extends State<ExpandableIssuesWidget> {
           ),
         ),
       ],
-    );
-    return ListTile(
-      leading: const Icon(Icons.warning_rounded, color: Colors.white),
-      title: Text(
-        "Issues - $totalIssues",
-        style: const TextStyle(color: Colors.white, fontSize: 14),
-      ),
-      trailing: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.red[100],
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          "High Priority - $highPriorityIssues",
-          style:
-              const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-        ),
-      ),
     );
   }
 
@@ -115,7 +98,7 @@ class _ExpandableIssuesWidgetState extends State<ExpandableIssuesWidget> {
                 category.category.name,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 16,
+                  fontSize: 14,
                   fontFamily: 'GothamBook',
                   fontWeight: FontWeight.w400,
                 ),
@@ -123,26 +106,45 @@ class _ExpandableIssuesWidgetState extends State<ExpandableIssuesWidget> {
             ],
           ),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                category.total.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontFamily: 'GothamBold',
-                  fontWeight: FontWeight.w700,
+              // Fixed width for the total count
+              SizedBox(
+                width: 24, // Adjust width based on expected number size
+                child: Text(
+                  category.total.toString(),
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontFamily: 'GothamBold',
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
-              const Icon(Icons.warning_rounded, color: Colors.red),
-              Text(
-                category.high.toString(),
-                style: const TextStyle(
-                  color: Colors.red,
-                  fontSize: 16,
-                  fontFamily: 'GothamBold',
-                  fontWeight: FontWeight.w700,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Icon(Icons.warning_rounded,
+                      color: Colors.red, size: 18),
+                  const SizedBox(width: 4),
+                  // Fixed width for the high priority count
+                  SizedBox(
+                    width: 12, // Adjust width based on expected number size
+                    child: Text(
+                      category.high.toString(),
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 14,
+                        fontFamily: 'GothamBold',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

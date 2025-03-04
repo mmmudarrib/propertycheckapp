@@ -2,16 +2,17 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:dotted_decoration/dotted_decoration.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_swipe_button/flutter_swipe_button.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
+import 'package:propertycheckapp/features/issue_list/pages/issue_list_new.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../homepage/data/models/booking.dart';
-import '../../issue_list/pages/issue_list_new.dart';
+import '../../login/pages/login_page.dart';
 
 class PropertyDetailPage extends StatefulWidget {
   final Booking booking;
@@ -56,10 +57,23 @@ class _PropertyDetailPageState extends State<PropertyDetailPage> {
                         fit: BoxFit.contain,
                       ),
                     ),
-                    const Icon(
-                      Icons.power_settings_new,
-                      color: Color(0xff686866),
-                      size: 20, // Adjust size as needed
+                    GestureDetector(
+                      onTap: () async {
+                        final SharedPreferences prefs =
+                            await SharedPreferences.getInstance();
+                        await prefs.clear();
+
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const LoginScreen()),
+                        );
+                      },
+                      child: const Icon(
+                        Icons.power_settings_new,
+                        color: Colors.white,
+                        size: 20, // Adjust size as needed
+                      ),
                     ),
                   ],
                 ),
@@ -176,7 +190,7 @@ class _PropertyDetailPageState extends State<PropertyDetailPage> {
                           const SizedBox(height: 16),
                           // Property Address
                           Text(
-                            "${widget.booking.area} ${widget.booking.community}",
+                            "${widget.booking.unit}, ${widget.booking.community} ${widget.booking.area} ",
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontFamily: 'GothamBook',
@@ -316,48 +330,7 @@ class _PropertyDetailPageState extends State<PropertyDetailPage> {
                             ],
                           ),
 
-                          const SizedBox(height: 16),
-                          Container(
-                            decoration: DottedDecoration(
-                                shape: Shape.box,
-                                borderRadius: BorderRadius.circular(10),
-                                color: const Color(0xff008138)),
-                            child: GestureDetector(
-                              onTap: () => _showImageSourceActionSheet(context),
-                              child: Container(
-                                width: 250,
-                                height: 250,
-                                decoration: const BoxDecoration(
-                                  color: Colors.black, // Black container
-                                ),
-                                child: (_image != null)
-                                    ? Image.file(_image!)
-                                    : const Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.add_photo_alternate_outlined,
-                                            color: Colors.grey,
-                                            size: 40,
-                                          ),
-                                          SizedBox(height: 10),
-                                          Text(
-                                            'Add an image of the front door to begin the check.',
-                                            style: TextStyle(
-                                              color: Colors.grey, // Text color
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.normal,
-                                            ),
-                                            textAlign: TextAlign
-                                                .center, // Center alignment for text
-                                          ),
-                                        ],
-                                      ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 110),
                           // Action Slider
                           SizedBox(
                             width: double.infinity,
@@ -373,7 +346,7 @@ class _PropertyDetailPageState extends State<PropertyDetailPage> {
                                   activeTrackColor: const Color(0xffDBFFEA),
                                   inactiveThumbColor: Colors.greenAccent,
                                   child: const Padding(
-                                    padding: EdgeInsets.only(left: 10),
+                                    padding: EdgeInsets.only(left: 50),
                                     child: Text(
                                       "SWIPE TO START CHECK",
                                       style: TextStyle(
@@ -385,22 +358,7 @@ class _PropertyDetailPageState extends State<PropertyDetailPage> {
                                     ),
                                   ),
                                   onSwipe: () async {
-                                    setState(() {
-                                      loading = true;
-                                    });
-                                    await updateBookingStatus(
-                                        widget.booking.id);
-                                    await _uploadImage();
-                                    setState(() {
-                                      loading = false;
-                                    });
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) => IssueListNew(
-                                                booking: widget.booking,
-                                              )),
-                                    );
+                                    await _pickImage();
                                   },
                                 ),
                               ),
@@ -432,9 +390,9 @@ class _PropertyDetailPageState extends State<PropertyDetailPage> {
               style: const TextStyle(
                   color: Colors.white,
                   fontFamily: 'GothamBook',
-                  fontSize: 14,
+                  fontSize: 10,
                   fontWeight: FontWeight.w400),
-              overflow: TextOverflow.ellipsis, // Handle overflow
+              overflow: TextOverflow.fade, // Handle overflow
             ),
           ),
         ],
@@ -442,86 +400,48 @@ class _PropertyDetailPageState extends State<PropertyDetailPage> {
     );
   }
 
-  void _showImageSourceActionSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16.0),
-        child: Wrap(
-          children: <Widget>[
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Gallery'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Camera'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.camera);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> updateBookingStatus(int bookingId) async {
-    final url = Uri.parse(
-        'https://ilovebackend.propertycheck.me/api/booking/attributes/$bookingId');
-
-    final response = await http.patch(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'bookingStatus': 'In Progress',
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      print('Booking status updated successfully.');
-    } else {
-      print('Failed to update booking status. Error: ${response.statusCode}');
-    }
-  }
-
-  Future<void> _pickImage(ImageSource source) async {
-    final pickedFile = await picker.pickImage(source: source);
-
+  Future<void> _pickImage() async {
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.camera);
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
       });
+      await _uploadImage();
     }
   }
 
   Future<void> _uploadImage() async {
     if (_image == null) return;
-
     try {
+      setState(() {
+        loading = true;
+      });
       final random = Random();
       String fileName =
           '${random.nextInt(1000000)}${path.extension(_image!.path)}';
-
       Reference firebaseStorageRef =
           FirebaseStorage.instance.ref().child('uploads/$fileName');
-
       UploadTask uploadTask = firebaseStorageRef.putFile(_image!);
       TaskSnapshot taskSnapshot = await uploadTask;
-
-      // Get the download URL of the uploaded image
       String downloadURL = await taskSnapshot.ref.getDownloadURL();
       await updateImage(widget.booking.id, downloadURL);
       await updateBookingStatus(widget.booking.id);
-      print('File available at: $downloadURL');
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => IssueListNew(
+            booking: widget.booking,
+          ),
+        ),
+      );
+      setState(() {
+        loading = false;
+      });
     } catch (e) {
+      setState(() {
+        loading = false;
+      });
       print('Error uploading image: $e');
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Failed to upload image.'),
@@ -529,21 +449,32 @@ class _PropertyDetailPageState extends State<PropertyDetailPage> {
     }
   }
 
+  Future<void> updateBookingStatus(int bookingId) async {
+    final url = Uri.parse(
+        'https://ilovebackend.propertycheck.me/api/booking/attributes/$bookingId');
+    final response = await http.patch(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'bookingStatus': 'In Progress'}),
+    );
+    if (response.statusCode == 200) {
+      print('Booking status updated successfully.');
+    } else {
+      print('Failed to update booking status. Error: ${response.statusCode}');
+    }
+  }
+
   Future<void> updateImage(int bookingId, String url) async {
     final uri = Uri.parse(
         'https://ilovebackend.propertycheck.me/api/booking/attributes/$bookingId');
-
     final response = await http.patch(
       uri,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'doorImage': url,
         'doorImageTimestamp': DateTime.now().toIso8601String()
       }),
     );
-
     if (response.statusCode == 200) {
       print('Booking image updated successfully.');
     } else {

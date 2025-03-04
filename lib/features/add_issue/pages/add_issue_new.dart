@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:propertycheckapp/features/issue_list/pages/issue_list_new.dart';
+import 'package:propertycheckapp/features/login/pages/login_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../homepage/data/models/booking.dart';
 import '../../issue_list/data/model/booking_issue.dart';
@@ -220,390 +222,448 @@ class _AddIssueScreenNewState extends State<AddIssueScreenNew> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: (_loading)
-            ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      color: Colors.black,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16.0, vertical: 8.0),
-                      child: Row(
+    return SafeArea(
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: (_loading)
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        color: Colors.black,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            SizedBox(
+                              width: 100, // Adjust width as needed
+
+                              child: Image.asset(
+                                'assets/images/logo.png',
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () async {
+                                final SharedPreferences prefs =
+                                    await SharedPreferences.getInstance();
+                                await prefs.clear();
+
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          const LoginScreen()),
+                                );
+                              },
+                              child: const Icon(
+                                Icons.power_settings_new,
+                                color: Colors.white,
+                                size: 20, // Adjust size as needed
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           SizedBox(
-                            width: 100, // Adjust width as needed
-                            height: 120, // Adjust height as needed
-                            child: Image.asset(
-                              'assets/images/logo.png',
-                              fit: BoxFit.contain,
+                            width: 100,
+                            child: Row(
+                              children: [
+                                IconButton(
+                                  onPressed: () {
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => IssueListNew(
+                                                booking: widget.booking,
+                                              )),
+                                    );
+                                  },
+                                  icon: const Icon(
+                                    Icons.arrow_back_ios_new,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Expanded(
+                                  // Use Flexible here instead of Expanded
+                                  child: Text(
+                                    "# ${widget.booking.id.toString()}",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontFamily: 'GothamBlack',
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    overflow: TextOverflow
+                                        .ellipsis, // Handle overflow
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          const Icon(
-                            Icons.power_settings_new,
-                            color: Colors.white,
-                            size: 20, // Adjust size as needed
                           ),
                         ],
                       ),
-                    ),
-                    SizedBox(
-                      height: 300,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _imagesWithNotes.length + 1,
-                        itemBuilder: (context, index) {
-                          return index == _imagesWithNotes.length
-                              ? GestureDetector(
-                                  onTap: () =>
-                                      _showImageSourceActionSheet(context),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Container(
-                                      width: MediaQuery.of(context).size.width -
-                                          50,
-                                      color: Colors.grey.shade800,
-                                      child: const Icon(Icons.add_a_photo,
-                                          color: Colors.white, size: 50),
+                      SizedBox(
+                        height: 300,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _imagesWithNotes.length + 1,
+                          itemBuilder: (context, index) {
+                            return index == _imagesWithNotes.length
+                                ? GestureDetector(
+                                    onTap: () =>
+                                        _showImageSourceActionSheet(context),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Container(
+                                        width:
+                                            MediaQuery.of(context).size.width -
+                                                50,
+                                        color: Colors.grey.shade800,
+                                        child: const Icon(Icons.add_a_photo,
+                                            color: Colors.white, size: 50),
+                                      ),
                                     ),
-                                  ),
-                                )
-                              : _buildImageCard(index, context);
+                                  )
+                                : _buildImageCard(index, context);
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildDropdown<Room>(
+                        title: 'Room',
+                        value: selectedrooms,
+                        items: rooms,
+                        itemLabel: (item) => item.childRoomTypeName,
+                        onChanged: (r) {
+                          setState(() {
+                            selectedrooms = r;
+                            subcategories.clear();
+                            issueTypes.clear();
+                          });
                         },
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildDropdown<Room>(
-                      title: 'Room',
-                      value: selectedrooms,
-                      items: rooms,
-                      itemLabel: (item) => item.childRoomTypeName,
-                      onChanged: (r) {
-                        setState(() {
-                          selectedrooms = r;
-                          subcategories.clear();
-                          issueTypes.clear();
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    _buildDropdown<Category>(
-                      title: 'Issue Category',
-                      value: selectedCategory,
-                      items: categories,
-                      itemLabel: (item) => item.name,
-                      onChanged: (category) {
-                        setState(() {
-                          selectedCategory = category;
-                          subcategories.clear();
-                          issueTypes.clear();
-                        });
-                        if (category != null) fetchSubcategories(category.id);
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    _buildDropdown<Subcategory>(
-                      title: 'Issue Subcategory',
-                      value: selectedSubCategory,
-                      items: subcategories,
-                      itemLabel: (item) => item.name,
-                      onChanged: (subcategory) {
-                        setState(() {
-                          selectedSubCategory = subcategory;
-                          issueTypes.clear();
-                        });
-                        if (subcategory != null)
-                          fetchIssueTypes(subcategory.id);
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    _buildDropdown<IssueType>(
-                      title: 'Issue Type',
-                      value: selectedIssueType,
-                      items: issueTypes,
-                      itemLabel: (item) => item.name,
-                      onChanged: (issueType) {
-                        setState(() => selectedIssueType = issueType);
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              status = "Failed";
-                            });
-                          },
-                          child: Chip(
-                            side: const BorderSide(color: Colors.red),
-                            label: Row(
-                              children: [
-                                Image.asset(
-                                  status != "Failed"
-                                      ? "assets/images/cancel-inactive.png"
-                                      : "assets/images/cancel-active.png",
-                                  width: 25,
-                                  height: 25,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Failed',
-                                  style: TextStyle(
-                                    color: status == "Failed"
-                                        ? Colors.red
-                                        : const Color(0xffB7B7B7),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            backgroundColor: status != "Failed"
-                                ? Colors.black
-                                : Colors.red.withOpacity(0.1),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              status = "At Risk";
-                            });
-                          },
-                          child: Chip(
-                            side: const BorderSide(color: Colors.orange),
-                            label: Row(
-                              children: [
-                                Image.asset(
-                                  status != "At Risk"
-                                      ? "assets/images/risk-inactive.png"
-                                      : "assets/images/risk-active.png",
-                                  width: 25,
-                                  height: 25,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'At Risk',
-                                  style: TextStyle(
-                                    color: status == "At Risk"
-                                        ? Colors.orange
-                                        : const Color(0xffB7B7B7),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            backgroundColor: status != "At Risk"
-                                ? Colors.black
-                                : Colors.orange.withOpacity(0.1),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              status = "Passed";
-                            });
-                          },
-                          child: Chip(
-                            side: const BorderSide(color: Colors.green),
-                            label: Row(
-                              children: [
-                                Image.asset(
-                                  status != "Passed"
-                                      ? "assets/images/pass-inactive.png"
-                                      : "assets/images/passed-active.png",
-                                  width: 25,
-                                  height: 25,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Passed',
-                                  style: TextStyle(
-                                    color: status == "Passed"
-                                        ? Colors.green
-                                        : const Color(0xffB7B7B7),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            backgroundColor: status != "Passed"
-                                ? Colors.black
-                                : Colors.green.withOpacity(0.1),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _isHighPriority = !_isHighPriority;
-                        });
-                      },
-                      child: Chip(
-                          side: BorderSide(
-                              color: !_isHighPriority
-                                  ? Colors.red
-                                  : const Color.fromARGB(255, 201, 137, 137)),
-                          label: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Image.asset(
-                                !_isHighPriority
-                                    ? "assets/images/priority-inactive.png"
-                                    : "assets/images/priority-active.png",
-                                width: 25,
-                                height: 25,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'High Priority',
-                                style: TextStyle(
-                                  color: _isHighPriority
-                                      ? Colors.white
-                                      : const Color(0xffB7B7B7),
-                                ),
-                              ),
-                            ],
-                          ),
-                          backgroundColor: !_isHighPriority
-                              ? Colors.black
-                              : const Color(0xffEF4444)),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () async {
-                            {
-                              final bool? result = await showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Reset Form'),
-                                  content: const Text(
-                                      'Are you sure you want to reset the form?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, false),
-                                      child: const Text('No'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, true),
-                                      child: const Text('Yes'),
-                                    ),
-                                  ],
-                                ),
-                              );
-
-                              if (result == true) {
-                                setState(() {
-                                  _imagesWithNotes.clear();
-                                  selectedCategory = null;
-                                  selectedSubCategory = null;
-                                  selectedIssueType = null;
-                                  subcategories.clear();
-                                  issueTypes.clear();
-                                });
-                              }
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
-                              padding: EdgeInsets.zero,
-                              minimumSize: const Size(40, 40),
-                              backgroundColor: const Color(0xffFFD5D5)),
-                          child: Image.asset(
-                            "assets/images/delete.png",
-                            width: 20,
-                            height: 20,
-                          ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            _pickImage(true);
-                          },
-                          style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
-                              backgroundColor: Colors.green),
-                          child: Image.asset(
-                            "assets/images/add-image.png",
-                            width: 25,
-                            height: 25,
-                          ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            _pickImage(false);
-                          },
-                          style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
-                              backgroundColor: Colors.green),
-                          child: Image.asset(
-                            "assets/images/camera.png",
-                            width: 25,
-                            height: 25,
-                          ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () async {
-                            print("Submit Issue button pressed");
-                            setState(() {
-                              _loading = true;
-                            });
-                            if (selectedCategory != null &&
-                                selectedSubCategory != null &&
-                                selectedIssueType != null &&
-                                _imagesWithNotes.isNotEmpty) {
-                              _bookingIssueId = await _submitAnotherIssue();
-                              if (_bookingIssueId != null) {
-                                await uploadImagesToFirebase();
-                              }
+                      const SizedBox(height: 8),
+                      _buildDropdown<Category>(
+                        title: 'Issue Category',
+                        value: selectedCategory,
+                        items: categories,
+                        itemLabel: (item) => item.name,
+                        onChanged: (category) {
+                          setState(() {
+                            selectedCategory = category;
+                            subcategories.clear();
+                            issueTypes.clear();
+                          });
+                          if (category != null) fetchSubcategories(category.id);
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      _buildDropdown<Subcategory>(
+                        title: 'Issue Subcategory',
+                        value: selectedSubCategory,
+                        items: subcategories,
+                        itemLabel: (item) => item.name,
+                        onChanged: (subcategory) {
+                          setState(() {
+                            selectedSubCategory = subcategory;
+                            issueTypes.clear();
+                          });
+                          if (subcategory != null)
+                            fetchIssueTypes(subcategory.id);
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      _buildDropdown<IssueType>(
+                        title: 'Issue Type',
+                        value: selectedIssueType,
+                        items: issueTypes,
+                        itemLabel: (item) => item.name,
+                        onChanged: (issueType) {
+                          setState(() => selectedIssueType = issueType);
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          GestureDetector(
+                            onTap: () {
                               setState(() {
-                                _loading = false;
+                                status = "Failed";
                               });
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text(
-                                        'Issue record added successfully!')),
-                              );
-
-                              Navigator.of(context).pushReplacement(
-                                MaterialPageRoute(
-                                    builder: (context) => IssueListNew(
-                                          booking: widget.booking,
-                                        )),
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.0),
+                            },
+                            child: Chip(
+                              side: const BorderSide(color: Colors.red),
+                              label: Row(
+                                children: [
+                                  Image.asset(
+                                    status != "Failed"
+                                        ? "assets/images/cancel-inactive.png"
+                                        : "assets/images/cancel-active.png",
+                                    width: 25,
+                                    height: 25,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Failed',
+                                    style: TextStyle(
+                                      color: status == "Failed"
+                                          ? Colors.red
+                                          : const Color(0xffB7B7B7),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              backgroundColor: Colors.green),
-                          child: Image.asset(
-                            "assets/images/add-issue.png",
-                            width: 25,
-                            height: 25,
+                              backgroundColor: status != "Failed"
+                                  ? Colors.black
+                                  : Colors.red.withOpacity(0.1),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                status = "At Risk";
+                              });
+                            },
+                            child: Chip(
+                              side: const BorderSide(color: Colors.orange),
+                              label: Row(
+                                children: [
+                                  Image.asset(
+                                    status != "At Risk"
+                                        ? "assets/images/risk-inactive.png"
+                                        : "assets/images/risk-active.png",
+                                    width: 25,
+                                    height: 25,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'At Risk',
+                                    style: TextStyle(
+                                      color: status == "At Risk"
+                                          ? Colors.orange
+                                          : const Color(0xffB7B7B7),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              backgroundColor: status != "At Risk"
+                                  ? Colors.black
+                                  : Colors.orange.withOpacity(0.1),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                status = "Passed";
+                              });
+                            },
+                            child: Chip(
+                              side: const BorderSide(color: Colors.green),
+                              label: Row(
+                                children: [
+                                  Image.asset(
+                                    status != "Passed"
+                                        ? "assets/images/pass-inactive.png"
+                                        : "assets/images/passed-active.png",
+                                    width: 25,
+                                    height: 25,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Passed',
+                                    style: TextStyle(
+                                      color: status == "Passed"
+                                          ? Colors.green
+                                          : const Color(0xffB7B7B7),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              backgroundColor: status != "Passed"
+                                  ? Colors.black
+                                  : Colors.green.withOpacity(0.1),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _isHighPriority = !_isHighPriority;
+                          });
+                        },
+                        child: Chip(
+                            side: BorderSide(
+                                color: !_isHighPriority
+                                    ? Colors.red
+                                    : const Color.fromARGB(255, 201, 137, 137)),
+                            label: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(
+                                  !_isHighPriority
+                                      ? "assets/images/priority-inactive.png"
+                                      : "assets/images/priority-active.png",
+                                  width: 25,
+                                  height: 25,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'High Priority',
+                                  style: TextStyle(
+                                    color: _isHighPriority
+                                        ? Colors.white
+                                        : const Color(0xffB7B7B7),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            backgroundColor: !_isHighPriority
+                                ? Colors.black
+                                : const Color(0xffEF4444)),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () async {
+                              {
+                                final bool? result = await showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Reset Form'),
+                                    content: const Text(
+                                        'Are you sure you want to reset the form?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text('No'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: const Text('Yes'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (result == true) {
+                                  setState(() {
+                                    _imagesWithNotes.clear();
+                                    selectedCategory = null;
+                                    selectedSubCategory = null;
+                                    selectedIssueType = null;
+                                    subcategories.clear();
+                                    issueTypes.clear();
+                                  });
+                                }
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                                padding: EdgeInsets.zero,
+                                minimumSize: const Size(40, 40),
+                                backgroundColor: const Color(0xffFFD5D5)),
+                            child: Image.asset(
+                              "assets/images/delete.png",
+                              width: 20,
+                              height: 20,
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              _pickImage(true);
+                            },
+                            style: ElevatedButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                                backgroundColor: Colors.green),
+                            child: Image.asset(
+                              "assets/images/add-image.png",
+                              width: 25,
+                              height: 25,
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              _pickImage(false);
+                            },
+                            style: ElevatedButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                                backgroundColor: Colors.green),
+                            child: Image.asset(
+                              "assets/images/camera.png",
+                              width: 25,
+                              height: 25,
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () async {
+                              print("Submit Issue button pressed");
+                              setState(() {
+                                _loading = true;
+                              });
+                              if (selectedCategory != null &&
+                                  selectedSubCategory != null &&
+                                  selectedIssueType != null &&
+                                  _imagesWithNotes.isNotEmpty) {
+                                _bookingIssueId = await _submitAnotherIssue();
+                                if (_bookingIssueId != null) {
+                                  await uploadImagesToFirebase();
+                                }
+                                setState(() {
+                                  _loading = false;
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text(
+                                          'Issue record added successfully!')),
+                                );
+
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute(
+                                      builder: (context) => IssueListNew(
+                                            booking: widget.booking,
+                                          )),
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                                backgroundColor: Colors.green),
+                            child: Image.asset(
+                              "assets/images/add-issue.png",
+                              width: 25,
+                              height: 25,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+        ),
       ),
     );
   }

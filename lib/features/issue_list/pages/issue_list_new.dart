@@ -2,8 +2,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../homepage/data/models/booking.dart';
+import '../../login/pages/login_page.dart';
 import '../../visit_details/pages/visit_details_page_new.dart';
 import '../bloc/booking_issue_bloc.dart';
 import '../bloc/booking_issue_event.dart';
@@ -45,9 +47,9 @@ class _IssueListNewState extends State<IssueListNew> {
                   var filteredList = filterIssues(
                       state.issues, selectedRoomId, selectedCategoryId);
 
-                  return _buildBody(context, filteredList);
+                  return _buildBody(context, filteredList, state.issues);
                 } else if (state is IssueListError) {
-                  return _buildErrorState();
+                  return _buildErrorState(state.error);
                 }
                 return const SizedBox.shrink();
               },
@@ -75,9 +77,10 @@ class _IssueListNewState extends State<IssueListNew> {
     }).toList();
   }
 
-  Widget _buildBody(BuildContext context, List<BookingIssue> issues) {
+  Widget _buildBody(BuildContext context, List<BookingIssue> issues,
+      List<BookingIssue> allIssues) {
     final uniqueIssues = <int, Map<String, dynamic>>{};
-    for (var issue in issues) {
+    for (var issue in allIssues) {
       final id = issue.issueType.subcategory.category.id;
       final name = issue.issueType.subcategory.category.name;
 
@@ -112,7 +115,7 @@ class _IssueListNewState extends State<IssueListNew> {
     bool hasHigh = false;
     bool hasNormal = false;
 
-    for (var issue in issues) {
+    for (var issue in allIssues) {
       String severity = issue.severity.toLowerCase();
       if (severity == "high") {
         hasHigh = true;
@@ -163,10 +166,23 @@ class _IssueListNewState extends State<IssueListNew> {
                       fit: BoxFit.contain,
                     ),
                   ),
-                  const Icon(
-                    Icons.power_settings_new,
-                    color: Color(0xff686866),
-                    size: 20, // Adjust size as needed
+                  GestureDetector(
+                    onTap: () async {
+                      final SharedPreferences prefs =
+                          await SharedPreferences.getInstance();
+                      await prefs.clear();
+
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const LoginScreen()),
+                      );
+                    },
+                    child: const Icon(
+                      Icons.power_settings_new,
+                      color: Colors.white,
+                      size: 20, // Adjust size as needed
+                    ),
                   ),
                 ],
               ),
@@ -179,9 +195,7 @@ class _IssueListNewState extends State<IssueListNew> {
                   child: Row(
                     children: [
                       IconButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
+                        onPressed: () {},
                         icon: const Icon(
                           Icons.arrow_back_ios_new,
                           color: Colors.white,
@@ -219,6 +233,7 @@ class _IssueListNewState extends State<IssueListNew> {
                         const Text(
                           'Check Details',
                           style: TextStyle(
+                            fontFamily: 'GothamBook',
                             color: Colors.white,
                             fontSize: 16.0,
                           ),
@@ -244,7 +259,7 @@ class _IssueListNewState extends State<IssueListNew> {
               child: Text(
                 "RECENT ISSUES CAPTURED",
                 style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 16,
                     fontFamily: 'GothamBlack',
                     fontWeight: FontWeight.w500,
                     color: Colors.white),
@@ -321,11 +336,11 @@ class _IssueListNewState extends State<IssueListNew> {
     );
   }
 
-  Widget _buildErrorState() {
-    return const Center(
+  Widget _buildErrorState(String message) {
+    return Center(
       child: Text(
-        "Failed to load issues. Please try again later.",
-        style: TextStyle(color: Colors.white, fontSize: 16),
+        message,
+        style: const TextStyle(color: Colors.white, fontSize: 16),
       ),
     );
   }
@@ -431,15 +446,15 @@ class _IssueListNewState extends State<IssueListNew> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: const Color(0xff2E2E2E),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(5),
       ),
       child: Text(
         text,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 12,
-          fontFamily: 'GothamBold',
-          fontWeight: FontWeight.w700,
+          fontSize: 10,
+          fontFamily: 'GothamBook',
+          fontWeight: FontWeight.w400,
         ),
       ),
     );
@@ -454,7 +469,7 @@ class _IssueListNewState extends State<IssueListNew> {
     return StatefulBuilder(
       builder: (context, setState) {
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
             color: const Color(0xff383838), // Background color of the dropdown
             borderRadius: BorderRadius.circular(100), // Rounded corners
@@ -470,6 +485,8 @@ class _IssueListNewState extends State<IssueListNew> {
                   child: Text(
                     label,
                     style: const TextStyle(
+                        fontFamily: 'GothamBook',
+                        fontSize: 10,
                         color:
                             Color(0xffB7B7B7)), // Style the label differently
                   ),
@@ -480,7 +497,10 @@ class _IssueListNewState extends State<IssueListNew> {
                     value: item['id'],
                     child: Text(
                       item['name'],
-                      style: const TextStyle(color: Color(0xffB7B7B7)),
+                      style: const TextStyle(
+                          color: Color(0xffB7B7B7),
+                          fontSize: 10,
+                          fontFamily: 'GothamBook'),
                     ),
                   );
                 }),
@@ -526,8 +546,8 @@ class CustomChip extends StatelessWidget {
         children: [
           Image.asset(
             icon,
-            width: 25,
-            height: 25,
+            width: 20,
+            height: 20,
           ),
           const SizedBox(width: 8),
           Text(
@@ -535,6 +555,7 @@ class CustomChip extends StatelessWidget {
             style: TextStyle(
               color: textColor,
               fontFamily: 'GothamBold',
+              fontSize: 10,
               fontWeight: FontWeight.w700,
             ),
           ),

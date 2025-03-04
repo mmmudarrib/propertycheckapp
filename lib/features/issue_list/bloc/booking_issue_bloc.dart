@@ -25,7 +25,7 @@ class IssueListBloc extends Bloc<IssueListEvent, IssueListState> {
 
         emit(IssueListLoaded(issues));
       } else {
-        emit(IssueListError('No issues found for this booking.'));
+        emit(IssueListError('No issues added for this booking yet'));
       }
     } catch (e) {
       emit(IssueListError('Failed to load issues: $e'));

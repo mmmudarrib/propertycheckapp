@@ -7,6 +7,7 @@ import '../../homepage/data/models/booking.dart';
 import '../../homepage/data/repository/booking_repo.dart';
 import '../../homepage/pages/new_homepage.dart';
 import '../../homepage/pages/new_homepage_unsectioned.dart';
+import '../../login/pages/login_page.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -89,9 +90,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .toList()
         .length;
     int completedCount = bookingData
-        .where((b) =>
-            b.bookingStatus == "Completed" &&
-            DateTime.parse(b.visitDate).isAfter(yesterday))
+        .where((b) => b.bookingStatus == "Completed")
         .toList()
         .length;
     final statuses = [
@@ -138,10 +137,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             fit: BoxFit.contain,
                           ),
                         ),
-                        const Icon(
-                          Icons.power_settings_new,
-                          color: Color(0xff686866),
-                          size: 20, // Adjust size as needed
+                        GestureDetector(
+                          onTap: () async {
+                            final SharedPreferences prefs =
+                                await SharedPreferences.getInstance();
+                            await prefs.clear();
+
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const LoginScreen()),
+                            );
+                          },
+                          child: const Icon(
+                            Icons.power_settings_new,
+                            color: Colors.white,
+                            size: 20, // Adjust size as needed
+                          ),
                         ),
                       ],
                     ),
@@ -164,11 +176,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   fontWeight: FontWeight.w400,
                 ),
                 items: [
-                  _buildBottomNavItem("Planned ($plannedCount)", Icons.star, 0),
                   _buildBottomNavItem(
-                      "In Progress ($progressCount)", Icons.star, 1),
+                      "Planned ($plannedCount)",
+                      "assets/images/calendar_grey.png",
+                      "assets/images/calendar_white.png",
+                      0),
                   _buildBottomNavItem(
-                      "Completed ($completedCount)", Icons.star, 2),
+                      "In Progress ($progressCount)",
+                      "assets/images/in_progress_grey.png",
+                      "assets/images/in_progress_white.png",
+                      1),
+                  _buildBottomNavItem(
+                      "Completed ($completedCount)",
+                      "assets/images/check_grey.png",
+                      "assets/images/in_progress_white.png",
+                      2),
                 ],
                 currentIndex: _currentIndex,
                 selectedItemColor: Colors.white,
@@ -185,7 +207,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   BottomNavigationBarItem _buildBottomNavItem(
-      String label, IconData icon, int index) {
+      String label, String iconInactive, String iconActive, int index) {
     return BottomNavigationBarItem(
       icon: Column(
         children: [
@@ -196,7 +218,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               width: 80,
               color: Colors.white, // Selected indicator
             ),
-          Icon(icon),
+          const SizedBox(
+            height: 5,
+          ),
+          (_currentIndex == index)
+              ? Image.asset(
+                  iconActive,
+                  width: 20,
+                )
+              : Image.asset(
+                  iconInactive,
+                  width: 20,
+                ),
         ],
       ),
       label: label,

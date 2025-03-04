@@ -282,13 +282,14 @@ class _NewHomepageState extends State<NewHomepage> {
                     : const SizedBox.shrink(),
                 const SizedBox(height: 8),
                 Text(
-                  visit.area,
+                  "${visit.unit}, ${visit.community} ${visit.area} ",
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
                     fontFamily: "GothamBook",
                     fontWeight: FontWeight.w400,
                   ),
+
                   maxLines: 2, // Set a maximum of two lines
                   overflow: TextOverflow
                       .ellipsis, // Add ellipsis (...) if the text exceeds two lines

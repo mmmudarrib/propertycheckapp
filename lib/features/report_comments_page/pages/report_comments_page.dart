@@ -5,6 +5,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_swipe_button/flutter_swipe_button.dart';
 import 'package:http/http.dart' as http;
 import 'package:propertycheckapp/features/dashboard/pages/dashboard.dart';
+import 'package:propertycheckapp/features/issue_list/pages/issue_list_new.dart';
+import 'package:propertycheckapp/features/login/pages/login_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../homepage/data/models/booking.dart';
 import '../../issue_list/bloc/booking_issue_bloc.dart';
@@ -92,10 +95,23 @@ class _ReportCommentsPageState extends State<ReportCommentsPage> {
                     fit: BoxFit.contain,
                   ),
                 ),
-                const Icon(
-                  Icons.power_settings_new,
-                  color: Color(0xff686866),
-                  size: 20, // Adjust size as needed
+                GestureDetector(
+                  onTap: () async {
+                    final SharedPreferences prefs =
+                        await SharedPreferences.getInstance();
+                    await prefs.clear();
+
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const LoginScreen()),
+                    );
+                  },
+                  child: const Icon(
+                    Icons.power_settings_new,
+                    color: Colors.white,
+                    size: 20, // Adjust size as needed
+                  ),
                 ),
               ],
             ),
@@ -104,7 +120,21 @@ class _ReportCommentsPageState extends State<ReportCommentsPage> {
             children: [
               IconButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  if (widget.booking.bookingStatus == "Completed") {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const DashboardScreen()),
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => IssueListNew(
+                                booking: widget.booking,
+                              )),
+                    );
+                  }
                 },
                 icon: const Icon(
                   Icons.arrow_back_ios_new,
@@ -182,43 +212,45 @@ class _ReportCommentsPageState extends State<ReportCommentsPage> {
             ),
           ),
           const SizedBox(height: 64),
-          SizedBox(
-            width: double.infinity,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: SwipeButton.expand(
-                  thumb: const Icon(
-                    Icons.chevron_right,
-                    color: Colors.white,
-                  ),
-                  activeThumbColor: const Color(0xffEF4444),
-                  activeTrackColor: const Color(0xffFFD5D5),
-                  inactiveThumbColor: Colors.redAccent,
-                  child: const Padding(
-                    padding: EdgeInsets.only(left: 10),
-                    child: Text(
-                      "SWIPE TO COMPLETE CHECK",
-                      style: TextStyle(
-                        fontFamily: 'GothamBold',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 18,
-                        color: Color(0xffEF4444),
+          (widget.booking.bookingStatus != "Completed")
+              ? SizedBox(
+                  width: double.infinity,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: SwipeButton.expand(
+                        thumb: const Icon(
+                          Icons.chevron_right,
+                          color: Colors.white,
+                        ),
+                        activeThumbColor: const Color(0xffEF4444),
+                        activeTrackColor: const Color(0xffFFD5D5),
+                        inactiveThumbColor: Colors.redAccent,
+                        child: const Padding(
+                          padding: EdgeInsets.only(left: 50),
+                          child: Text(
+                            "SWIPE TO COMPLETE CHECK",
+                            style: TextStyle(
+                              fontFamily: 'GothamBold',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                              color: Color(0xffEF4444),
+                            ),
+                          ),
+                        ),
+                        onSwipe: () async {
+                          await updateBookingStatus(widget.booking.id);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const DashboardScreen()),
+                          );
+                        },
                       ),
                     ),
                   ),
-                  onSwipe: () async {
-                    await updateBookingStatus(widget.booking.id);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const DashboardScreen()),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
+                )
+              : const SizedBox.shrink(),
         ],
       ),
     );

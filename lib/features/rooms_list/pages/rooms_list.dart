@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:propertycheckapp/features/add_room/pagew/add_room.dart';
 import 'package:propertycheckapp/features/homepage/data/models/booking.dart';
+import 'package:propertycheckapp/features/issue_list/pages/issue_list_new.dart';
+import 'package:propertycheckapp/features/login/pages/login_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RoomListPage extends StatefulWidget {
   final Booking booking;
@@ -96,10 +99,23 @@ class _RoomListPageState extends State<RoomListPage> {
                       fit: BoxFit.contain,
                     ),
                   ),
-                  const Icon(
-                    Icons.power_settings_new,
-                    color: Color(0xff686866),
-                    size: 20, // Adjust size as needed
+                  GestureDetector(
+                    onTap: () async {
+                      final SharedPreferences prefs =
+                          await SharedPreferences.getInstance();
+                      await prefs.clear();
+
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const LoginScreen()),
+                      );
+                    },
+                    child: const Icon(
+                      Icons.power_settings_new,
+                      color: Colors.white,
+                      size: 20, // Adjust size as needed
+                    ),
                   ),
                 ],
               ),
@@ -108,7 +124,13 @@ class _RoomListPageState extends State<RoomListPage> {
               children: [
                 IconButton(
                   onPressed: () {
-                    Navigator.of(context).pop();
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            IssueListNew(booking: widget.booking),
+                      ),
+                    );
                   },
                   icon: const Icon(
                     Icons.arrow_back_ios_new,
